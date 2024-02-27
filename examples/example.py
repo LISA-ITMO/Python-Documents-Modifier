@@ -1,5 +1,5 @@
 from src.edocx import EDocx
-from src.utils import Color
+from src.utils import Color, UnderlineStyle, FontStyle
 
 if __name__ == '__main__':
     doc = EDocx('example.docx')  # Open example.docx
@@ -12,8 +12,13 @@ if __name__ == '__main__':
     # Add comment to first paragraph with text 'Example comment' by 'Manager' and print result
     print(doc.add_comment_by_id(paraId, 'Example comment', 'Manager'))
 
-    # Edit font size of first paragraph and print result
-    print(doc.edit_font_size_by_id(paraId, 14))
-
-    # Edit text color of first paragraph and print result
-    print(doc.edit_color_by_id(paraId, Color.blue))
+    # Edit style of first paragraph and print result
+    print(doc.edit_style_by_id(
+        paraId=paraId,
+        size=14,
+        color=Color.BLUE,
+        italic=False,
+        bold=True,
+        underline=UnderlineStyle.WAVY_DOUBLE,
+        fontStyle=FontStyle.TIMES_NEW_ROMAN
+    ))
