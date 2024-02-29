@@ -1,5 +1,4 @@
 from docx.shared import RGBColor
-from docx.enum.text import WD_UNDERLINE
 from src.exceptions import ImpossibleColor
 
 

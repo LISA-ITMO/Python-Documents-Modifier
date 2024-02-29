@@ -1,7 +1,8 @@
 from docx import Document
 from docx.shared import Pt
 from docx.text.paragraph import Paragraph
-from src.exceptions import NotSupportedFormat
+from docx.text.run import Run
+from src.exceptions import NotSupportedFormat, ParagraphNotFound
 from src.utils import Color, UnderlineStyle, FontStyle
 from typing import List, Dict
 
@@ -14,6 +15,10 @@ class EDocx:
         """
         :param path: path to DOCX document
         """
+        if len(path) < 5 or len(path) > 255:
+            raise NameError(
+                f'\'{path}\' can\'t be open'
+            )
         if path[-5:] != '.docx':
             raise NotSupportedFormat(
                 f'\'{path}\' should be .docx'
@@ -31,10 +36,9 @@ class EDocx:
         else:
             self.document.save(path)
 
-    @property
     def __para_ids(self) -> Dict[str, Paragraph]:
         res = {}
-        key = '{http://schemas.microsoft.com/office/word/2010/wordml}paraId'
+        key = self.__get_schema_para_id()
         for para in self.document.paragraphs:
             try:
                 res[para.paragraph_format.element.attrib[key]] = para
@@ -42,22 +46,21 @@ class EDocx:
                 continue
         return res
 
-    def add_comment_by_id(self, paraId: str, comment: str, author: str = 'EDocx') -> bool:
+    def add_comment_by_id(self, paraId: str, comment: str, author: str = 'EDocx') -> None:
         """
         Add comment to paragraph by paraId
         :param paraId: paragraph id
         :param comment: a comment
         :param author: author's nickname
-        :return: True - comment has been added, False - paragraph not found
         """
-        para_ids = self.__para_ids
-        if paraId not in para_ids:
-            return False
-        else:
-            para_ids[paraId].add_comment(comment, author)
+        try:
+            self.__para_ids()[paraId].add_comment(comment, author)
             if self.autosave:
                 self.save()
-            return True
+        except KeyError as _ke:
+            raise ParagraphNotFound(
+                f'Paragraph with paraId \'{paraId}\' not found'
+            )
 
     def all_para_attributes(self) -> List[Dict[str, str]]:
         """
@@ -73,27 +76,50 @@ class EDocx:
                          size: int = None, color: Color = None,
                          fontStyle: FontStyle = None,
                          italic: bool = None, bold: bool = None,
-                         underline: UnderlineStyle = None) -> bool:
+                         underline: UnderlineStyle = None) -> None:
         """
         Edit font style of paragraph by paraId
-        :return: True - font style has been edited, False - paragraph not found
         """
-        para_ids = self.__para_ids
-        if paraId not in para_ids:
-            return False
-        for run in para_ids[paraId].runs:
-            if size is not None:
-                run.font.size = Pt(size)
-            if color is not None:
-                run.font.color.rgb = color
-            if fontStyle is not None:
-                run.font.name = fontStyle
-            if italic is not None:
-                run.font.italic = italic
-            if bold is not None:
-                run.font.bold = bold
-            if underline is not None:
-                run.font.underline = underline
-        if self.autosave:
-            self.save()
-        return True
+        try:
+            for run in self.__para_ids()[paraId].runs:
+                self.__edit_font_size(run, size)
+                self.__edit_text_color(run, color)
+                self.__edit_font_style(run, fontStyle)
+                self.__edit_italic(run, italic)
+                self.__edit_bold(run, bold)
+                self.__edit_underline(run, underline)
+
+            if self.autosave:
+                self.save()
+        except KeyError as _ke:
+            raise ParagraphNotFound(
+                f'Paragraph with paraId \'{paraId}\' not found'
+            )
+
+
+    def __get_schema_para_id(self) -> str:
+        return f'{{{self.document.element.nsmap["w14"]}}}paraId'
+
+    def __edit_font_size(self, run: Run, size: int) -> None:
+        if size is not None:
+            run.font.size = Pt(size)
+
+    def __edit_text_color(self, run: Run, color: Color) -> None:
+        if color is not None:
+            run.font.color.rgb = color
+
+    def __edit_font_style(self, run: Run, fontStyle: FontStyle) -> None:
+        if fontStyle is not None:
+            run.font.name = fontStyle
+
+    def __edit_italic(self, run: Run, italic: bool) -> None:
+        if italic is not None:
+            run.font.italic = italic
+
+    def __edit_bold(self, run: Run, bold: bool) -> None:
+        if bold is not None:
+            run.font.bold = bold
+
+    def __edit_underline(self, run: Run, underline: UnderlineStyle):
+        if underline is not None:
+            run.font.underline = underline
