@@ -8,8 +8,7 @@ from src.odtredactor import ODTRedactor
 if __name__ == '__main__':
     file = ODTRedactor('examples/example.odt')
 
-    file.annotation(
+    file.add_annotation(
         text="Пример некоторого текста",
         ann_text="Некоторая аннотация",
-        author="Некоторый автор"
     )
