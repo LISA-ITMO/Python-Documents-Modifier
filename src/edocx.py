@@ -2,8 +2,10 @@ from docx import Document
 from docx.shared import Pt
 from docx.text.paragraph import Paragraph
 from docx.text.run import Run
-from src.exceptions import NotSupportedFormat, ParagraphNotFound
-from src.utils import Color, UnderlineStyle, FontStyle
+from .enum.color import Color
+from .enum.font_style import FontStyle
+from .enum.underline_style import UnderlineStyle
+from .exceptions import NotSupportedFormat, ParagraphNotFound
 from typing import List, Dict
 
 
@@ -21,7 +23,7 @@ class EDocx:
             )
         if path[-5:] != '.docx':
             raise NotSupportedFormat(
-                f'\'{path}\' should be .docx'
+                path
             )
         self.path: str = path
         self.document: Document = Document(path)
@@ -59,7 +61,7 @@ class EDocx:
                 self.save()
         except KeyError as _ke:
             raise ParagraphNotFound(
-                f'Paragraph with paraId \'{paraId}\' not found'
+                paraId
             )
 
     def all_para_attributes(self) -> List[Dict[str, str]]:
@@ -93,7 +95,7 @@ class EDocx:
                 self.save()
         except KeyError as _ke:
             raise ParagraphNotFound(
-                f'Paragraph with paraId \'{paraId}\' not found'
+                paraId
             )
 
 
