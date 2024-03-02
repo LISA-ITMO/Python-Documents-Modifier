@@ -1,5 +1,4 @@
 class CodecoveTest:
     @classmethod
-    # test pep8 test pep8 test pep8 test pep8 test pep8 test pep8 test pep8 test pep8 test pep8 test pep8 test pep8 test pep8
     def calc(self):
-        return 1
+        return 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1
