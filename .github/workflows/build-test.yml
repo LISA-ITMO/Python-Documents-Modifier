@@ -27,7 +27,9 @@ jobs:
           pip install -r ${{ github.head_ref }}/requirements.txt
         fi
     - name: Run unittests
-      run: |
-        pytest --cov=src -s tests/
-        - name: Codecov-coverage
-        uses: codecov/codecov-action@v1
+      run: pytest --cov=src -s tests
+        - name: Upload coverage reports to Codecov
+          uses: codecov/codecov-action@v4.0.1
+          with:
+            token: ${{ secrets.CODECOV_TOKEN }}
+            slug: LISA-ITMO/Edu-Analysis-Framework
