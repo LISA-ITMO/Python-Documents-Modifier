@@ -1,6 +1,9 @@
 name: Python-Documents-Modifier Workflow
 
-on: [push, pull_request]
+on:
+  push:
+  pull_request:
+  workflow_dispatch:  # manually launch from GitHub actions
 
 jobs:
   build:
