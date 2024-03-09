@@ -1,10 +1,10 @@
-from src.edocx import EDocx
-from src.enum.color import Color
-from src.enum.font_style import FontStyle
-from src.enum.underline_style import UnderlineStyle
+from src.docx.docxredactor import DOCXRedactor
+from src.docx.enum.color import Color
+from src.docx.enum.font_style import FontStyle
+from src.docx.enum import UnderlineStyle
 
 if __name__ == '__main__':
-    doc = EDocx('example.docx')  # Open example.docx
+    doc = DOCXRedactor('example.docx')  # Open example.docx
     doc.autosave = True  # Enable autosave changes
 
     attrib = doc.all_para_attributes()  # Get all paragraph attributes of a file

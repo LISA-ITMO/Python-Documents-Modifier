@@ -1,5 +1,5 @@
 from docx.shared import RGBColor
-from src.exceptions import ImpossibleColor
+from src.docx.exceptionsdocx import ImpossibleColor
 
 
 class Color(RGBColor):

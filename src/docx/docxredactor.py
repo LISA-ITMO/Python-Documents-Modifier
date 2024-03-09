@@ -2,14 +2,14 @@ from docx import Document
 from docx.shared import Pt
 from docx.text.paragraph import Paragraph
 from docx.text.run import Run
-from .enum.color import Color
-from .enum.font_style import FontStyle
-from .enum.underline_style import UnderlineStyle
-from .exceptions import NotSupportedFormat, ParagraphNotFound
+from src.docx.enum import Color
+from src.docx.enum import FontStyle
+from src.docx.enum.underline_style import UnderlineStyle
+from src.docx.exceptionsdocx import NotSupportedFormat, ParagraphNotFound
 from typing import List, Dict
 
 
-class EDocx:
+class DOCXRedactor:
     """
     Class for edit DOCX document objects
     """
