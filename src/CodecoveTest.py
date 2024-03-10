@@ -3,6 +3,7 @@ class CodecoveTest:
     def calc(self):
         return 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1
 
+    # long incorrect comment long incorrect comment long incorrect comment long incorrect comment long incorrect comment long incorrect comment
     def mul(self):
         return 2
 
