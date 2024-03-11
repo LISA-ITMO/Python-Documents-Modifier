@@ -98,7 +98,6 @@ class DOCXRedactor:
                 paraId
             )
 
-
     def __get_schema_para_id(self) -> str:
         return f'{{{self.document.element.nsmap["w14"]}}}paraId'
 
