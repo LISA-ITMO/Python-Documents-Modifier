@@ -1,7 +1,7 @@
 from src.docx.docxredactor import DOCXRedactor
 from src.docx.enum.color import Color
 from src.docx.enum.font_style import FontStyle
-from src.docx.enum import UnderlineStyle
+from src.docx.enum.underline_style import UnderlineStyle
 
 if __name__ == '__main__':
     doc = DOCXRedactor('example.docx')  # Open example.docx
