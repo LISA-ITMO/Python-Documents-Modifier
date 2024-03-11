@@ -1,4 +1,4 @@
-from src.docx.docxredactor import DOCXRedactor
+from src.docx.docx_redactor import DOCXRedactor
 from src.docx.enum.color import Color
 from src.docx.enum.font_style import FontStyle
 from src.docx.enum.underline_style import UnderlineStyle

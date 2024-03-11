@@ -1,6 +1,6 @@
 import unittest
-from src.docx.exceptionsdocx import *
-from src.docx.docxredactor import DOCXRedactor
+from src.exceptions.docx_exceptions import *
+from src.docx.docx_redactor import DOCXRedactor
 from src.docx.enum.color import Color
 from docx.opc.exceptions import PackageNotFoundError
 from os.path import join, dirname, abspath

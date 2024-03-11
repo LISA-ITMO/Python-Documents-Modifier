@@ -5,7 +5,7 @@ from docx.text.run import Run
 from src.docx.enum.color import Color
 from src.docx.enum.font_style import FontStyle
 from src.docx.enum.underline_style import UnderlineStyle
-from src.docx.exceptionsdocx import NotSupportedFormat, ParagraphNotFound
+from src.exceptions.docx_exceptions import NotSupportedFormat, ParagraphNotFound
 from typing import List, Dict
 
 
