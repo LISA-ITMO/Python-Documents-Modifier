@@ -40,7 +40,7 @@ class DOCXRedactor:
 
     def __para_ids(self) -> Dict[str, Paragraph]:
         res = {}
-        key = self.__get_schema_para_id()
+        key = self.__get_schema_paraId()
         for para in self.document.paragraphs:
             try:
                 res[para.paragraph_format.element.attrib[key]] = para
@@ -98,7 +98,7 @@ class DOCXRedactor:
                 paraId
             )
 
-    def __get_schema_para_id(self) -> str:
+    def __get_schema_paraId(self) -> str:
         return f'{{{self.document.element.nsmap["w14"]}}}paraId'
 
     def __edit_font_size(self, run: Run, size: int) -> None:

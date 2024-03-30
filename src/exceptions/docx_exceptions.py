@@ -21,3 +21,12 @@ class ParagraphNotFound(Exception):
     """
     def __init__(self, paraId: str) -> None:
         super().__init__(f'Paragraph with paraId \'{paraId}\' not found')
+
+
+class NumberingIsNotExists(Exception):
+    """
+    The error called when you try to open DOCX-file, that doesn't contain
+    word/numbering.xml file
+    """
+    def __int__(self, path: str) -> None:
+        super().__init__(f'File \'{path}\' does not contain \'numbering.xml\'')
