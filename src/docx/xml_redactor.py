@@ -1,9 +1,74 @@
 from docx import Document
 from docx.oxml import parse_xml
 from src.exceptions.docx_exceptions import NotSupportedFormat, NumberingIsNotExists
+import zipfile
+import os
+import shutil
+import tempfile
+import atexit
+import xml.etree.ElementTree as ET
+from src.docx.enum.schemas import schemas
 
 
 class XMLRedactor:
+    """
+    For correct work this class you should edit xml.etree.ElementTree
+    replace 862 line on : "return qnames, _namespace_map"
+    Else DOCX-file after editing will contain wrong namespace
+    """
+    def __init__(self, path: str):
+        self.path: str = path
+        self.temp_dir: str = tempfile.mkdtemp()
+        atexit.register(self.__rm_temp_dir)
+        self.__extract_files()
+
+    def __rm_temp_dir(self):
+        if self.temp_dir:
+            shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    def __extract_files(self):
+        with zipfile.ZipFile(self.path, 'r') as zr:
+            zr.extractall(self.temp_dir)
+
+    def delete_comment_by_id(self, comment_id: int | str):
+        for k, v in schemas.to_namespace.items():
+            ET.register_namespace(k, v)
+        tree = ET.parse(os.path.join(self.temp_dir, 'word', 'document.xml'))
+        root = tree.getroot()
+        for para in root.iter(f'{{{schemas.w}}}p'):
+            for element in para:
+                if element.tag == f'{{{schemas.w}}}commentRangeStart':
+                    if element.attrib[f'{{{schemas.w}}}id'] == str(comment_id):
+                        para.remove(element)
+                if element.tag == f'{{{schemas.w}}}commentRangeEnd':
+                    if element.attrib[f'{{{schemas.w}}}id'] == str(comment_id):
+                        para.remove(element)
+                if element.tag == f'{{{schemas.w}}}r':
+                    for sub_elem in element:
+                        if sub_elem.tag == f'{{{schemas.w}}}commentReference':
+                            if sub_elem.attrib[f'{{{schemas.w}}}id'] == str(comment_id):
+                                para.remove(element)
+        tree.write(os.path.join(self.temp_dir, 'word', 'document.xml'), xml_declaration=False,
+                   encoding='unicode')
+
+
+    def save(self, path: str = None):
+        if path is None:
+            path = self.path
+        with zipfile.ZipFile(path, 'w') as zw:
+            for folder, sub_folder, file_names in os.walk(self.temp_dir):
+                for file_name in file_names:
+                    file_path = os.path.join(folder, file_name)
+                    zw.write(file_path, os.path.relpath(file_path, self.temp_dir))
+
+    def get_document(self):
+        xml_path = os.path.join(self.temp_dir, 'word', 'document.xml')
+        tree = ET.parse(xml_path)
+        root = tree.getroot()
+        return ET.tostring(root, encoding='unicode')
+
+
+class XMLRedactorNumbering:
     """
     At the moment the class works only with word/numbering.xml
     """
@@ -33,16 +98,13 @@ class XMLRedactor:
         else:
             self.document.save(path)
 
-    def __get_schema(self, key: str) -> str:
-        return self.document.element.nsmap[key]
-
     @property
     def __get_schema_numId(self) -> str:
-        return f'{{{self.__get_schema("w")}}}numId'
+        return f'{{{schemas["w"]}}}numId'
 
     @property
     def __get_schema_abstractNumId(self) -> str:
-        return f'{{{self.__get_schema("w")}}}abstractNumId'
+        return f'{{{schemas["w"]}}}abstractNumId'
 
     @property
     def __get_new_numId(self) -> int:
@@ -63,7 +125,7 @@ class XMLRedactor:
         !!! Непонятно для чего durableId
         """
         num_element = parse_xml(f'''
-            <w:num xmlns:w="{self.__get_schema("w")}" xmlns:w16cid="{self.__get_schema("w16cid")}" w:numId="{self.__get_new_numId}" w16cid:durableId="0">
+            <w:num xmlns:w="{schemas["w"]}" xmlns:w16cid="{schemas["w16cid"]}" w:numId="{self.__get_new_numId}" w16cid:durableId="0">
                 <w:abstractNumId w:val="{self.__get_new_abstractId}"/>
             </w:num>
         ''')
@@ -71,7 +133,7 @@ class XMLRedactor:
         if self.autosave:
             self.document.save(self.path)
 
-    def add_new_abstractNum(self, lvl: int = 0) -> None:
+    def add_new_abstractNum(self) -> None:
         """
         !!! Много аттрибутов, непонятно какие нужны и за что отвечают
         !!! Проблема с bullet list, как различать различные символы, пока только о
@@ -85,11 +147,11 @@ class XMLRedactor:
                         <w:lvlText w:val="o"/>
                         <w:lvlJc w:val="left"/>'''
         abstract_num_element = parse_xml(f'''
-                <w:abstractNum xmlns:w="{self.__get_schema("w")}" w:abstractNumId="{self.__get_new_abstractId}">
-                    <w:nsid w:val="2A733D56"/>
+                <w:abstractNum xmlns:w="{schemas["w"]}" w:abstractNumId="{self.__get_new_abstractId}">
+                    <w:nsid w:val="0"/>
                     <w:multiLevelType w:val="hybridMultilevel"/>
-                    <w:tmpl w:val="47AAD25A"/>
-                    <w:lvl w:ilvl="{lvl}">
+                    <w:tmpl w:val="0"/>
+                    <w:lvl w:ilvl="0">
                         <w:start w:val="1"/>
                         <w:numFmt w:val="decimal"/>
                         <w:lvlText w:val="%1."/>
@@ -98,7 +160,7 @@ class XMLRedactor:
                             <w:ind w:left="720" w:hanging="360"/>
                         </w:pPr>
                         <w:rPr>
-                            <w:rFonts w:ascii="Wingdings" w:hAnsi="Wingdings" w:cs="Wingdings"/>
+                            <w:rFonts w:ascii="default"/>
                         </w:rPr>
                     </w:lvl>
                 </w:abstractNum>
@@ -107,3 +169,50 @@ class XMLRedactor:
         if self.autosave:
             self.document.save(self.path)
 
+
+example_abstract_decimal = '''
+    <w:abstractNum w:abstractNumId="2">
+        <w:nsid w:val="0"/>
+        <w:multiLevelType w:val="hybridMultilevel"/>
+        <w:tmpl w:val="0"/>
+        <w:lvl w:ilvl="0">
+            <w:start w:val="1"/>
+            <w:numFmt w:val="decimal"/>
+            <w:lvlText w:val="%1."/>
+            <w:lvlJc w:val="left"/>
+            <w:pPr>
+                <w:ind w:left="720" w:hanging="360"/>
+            </w:pPr>
+            <w:rPr>
+                <w:rFonts w:ascii="default"/>
+            </w:rPr>
+        </w:lvl>
+    </w:abstractNum>
+'''
+
+example_abstract_bullet = '''
+    <w:abstractNum w:abstractNumId="3">
+        <w:nsid w:val="0"/>
+        <w:multiLevelType w:val="hybridMultilevel"/>
+        <w:tmpl w:val="0"/>
+        <w:lvl w:ilvl="0">
+            <w:start w:val="1"/>
+            <w:numFmt w:val="bullet"/>
+            <w:lvlText w:val=""/>
+            <w:lvlJc w:val="left"/>
+            <w:pPr>
+                <w:ind w:left="720" w:hanging="360"/>
+            </w:pPr>
+            <w:rPr>
+                <w:rFonts w:ascii="Symbol" w:eastAsiaTheme="minorHAnsi" w:hAnsi="Symbol" w:cstheme="minorBidi"
+                          w:hint="default"/>
+            </w:rPr>
+        </w:lvl>
+    </w:abstractNum>
+'''
+
+example_num = '''
+    <w:num w:numId="3" w16cid:durableId="0">
+        <w:abstractNumId w:val="2"/>
+    </w:num>
+'''

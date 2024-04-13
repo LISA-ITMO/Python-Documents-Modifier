@@ -2,6 +2,7 @@ from docx import Document
 from docx.shared import Pt
 from docx.text.paragraph import Paragraph
 from docx.text.run import Run
+from src.docx.enum.schemas import schemas
 from src.docx.enum.color import Color
 from src.docx.enum.font_style import FontStyle
 from src.docx.enum.underline_style import UnderlineStyle
@@ -99,7 +100,7 @@ class DOCXRedactor:
             )
 
     def __get_schema_paraId(self) -> str:
-        return f'{{{self.document.element.nsmap["w14"]}}}paraId'
+        return f'{{{schemas["w14"]}}}paraId'
 
     def __edit_font_size(self, run: Run, size: int) -> None:
         if size is not None:
