@@ -8,6 +8,7 @@ import tempfile
 import atexit
 import xml.etree.ElementTree as ET
 from src.docx.enum.schemas import schemas
+from typing import Union
 
 
 class XMLRedactor:
@@ -30,7 +31,7 @@ class XMLRedactor:
         with zipfile.ZipFile(self.path, 'r') as zr:
             zr.extractall(self.temp_dir)
 
-    def delete_comment_by_id(self, comment_id: int | str):
+    def delete_comment_by_id(self, comment_id: Union[int, str]):
         for k, v in schemas.to_namespace.items():
             ET.register_namespace(k, v)
         tree = ET.parse(os.path.join(self.temp_dir, 'word', 'document.xml'))
@@ -48,7 +49,35 @@ class XMLRedactor:
                         if sub_elem.tag == f'{{{schemas.w}}}commentReference':
                             if sub_elem.attrib[f'{{{schemas.w}}}id'] == str(comment_id):
                                 para.remove(element)
-        tree.write(os.path.join(self.temp_dir, 'word', 'document.xml'), xml_declaration=False,
+        tree.write(os.path.join(self.temp_dir, 'word', 'document.xml'), xml_declaration=True,
+                   encoding='unicode')
+
+    def edit_comment_by_id(self, comment_id: Union[int, str], comment_text: str, new_author: str = None):
+        para_count = 0
+        remove_queue = {}
+        for k, v in schemas.to_namespace.items():
+            ET.register_namespace(k, v)
+        tree = ET.parse(os.path.join(self.temp_dir, 'word', 'comments.xml'))
+        root = tree.getroot()
+        for comment in root:
+            if comment.attrib[f'{{{schemas.w}}}id'] == str(comment_id):
+                if new_author is not None:
+                    comment.attrib[f'{{{schemas.w}}}author'] = new_author
+                for paragraph in comment:
+                    if para_count == 1:
+                        remove_queue[paragraph] = comment
+                    else:
+                        para_count += 1
+                        for elem in paragraph:
+                            if elem.tag == f'{{{schemas.w}}}r':
+                                for sub_elem in elem:
+                                    if sub_elem.tag == f'{{{schemas.w}}}t':
+                                        sub_elem.text = comment_text
+
+        for para, comm in remove_queue.items():
+            comm.remove(para)
+
+        tree.write(os.path.join(self.temp_dir, 'word', 'comments.xml'), xml_declaration=True,
                    encoding='unicode')
 
 
