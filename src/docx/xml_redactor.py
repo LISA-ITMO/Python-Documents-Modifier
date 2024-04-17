@@ -7,6 +7,7 @@ import shutil
 import tempfile
 import atexit
 import xml.etree.ElementTree as ET
+from xml.etree.ElementTree import Element
 from src.docx.enum.schemas import schemas
 from typing import Union
 
@@ -90,158 +91,58 @@ class XMLRedactor:
                     file_path = os.path.join(folder, file_name)
                     zw.write(file_path, os.path.relpath(file_path, self.temp_dir))
 
-    def get_document(self):
-        xml_path = os.path.join(self.temp_dir, 'word', 'document.xml')
-        tree = ET.parse(xml_path)
+    def add_new_abstract_and_num(self, is_decimal: bool = True) -> int:
+        """
+        Return id of new Num-object
+        """
+        for k, v in schemas.to_namespace.items():
+            ET.register_namespace(k, v)
+        tree = ET.parse(os.path.join(self.temp_dir, 'word', 'numbering.xml'))
         root = tree.getroot()
-        return ET.tostring(root, encoding='unicode')
+        max_abstract = -1
+        max_num = 0
+        for abstract_num in root.iter(f'{{{schemas.w}}}abstractNum'):
+            max_abstract = max(max_abstract, int(abstract_num.attrib[f'{{{schemas.w}}}abstractNumId']))
+        for num in root.iter(f'{{{schemas.w}}}num'):
+            max_num = max(max_num, int(num.attrib[f'{{{schemas.w}}}numId']))
+        insert_abstract = ET.Element(f'{{{schemas.w}}}abstractNum', {
+            f'{{{schemas.w}}}abstractNumId': str(max_abstract + 1),
+            f'{{{schemas.w15}}}restartNumberingAfterBreak': '0'
+        })
+        insert_abstract.append(ET.Element(f'{{{schemas.w}}}multiLevelType', {
+            f'{{{schemas.w}}}val': 'hybridMultilevel'
+        }))
+        insert_abstract.append(self.__create_ilvl(is_decimal))
+        insert_num = ET.Element(f'{{{schemas.w}}}num', {
+            f'{{{schemas.w}}}numId': str(max_num + 1),
+            f'{{{schemas.w16cid}}}durableId': '0'
+        })
+        insert_num.append(ET.Element(f'{{{schemas.w}}}abstractNumId', {
+            f'{{{schemas.w}}}val': str(max_abstract + 1)
+        }))
+        root.insert(len(root.findall(f'.//{{{schemas.w}}}abstractNum')), insert_abstract)
+        root.append(insert_num)
 
+        tree.write(os.path.join(self.temp_dir, 'word', 'numbering.xml'), xml_declaration=True,
+                   encoding='unicode')
+        return max_num + 1
 
-class XMLRedactorNumbering:
-    """
-    At the moment the class works only with word/numbering.xml
-    """
-    def __init__(self, path: str) -> None:
-        if len(path) < 5 or len(path) > 255:
-            raise NameError(
-                f'\'{path}\' can\'t be open'
-            )
-        if path[-5:] != '.docx':
-            raise NotSupportedFormat(
-                path
-            )
-        self.path: str = path
-        self.document: Document = Document(path)
-        self.autosave: bool = False
-        try:
-            self.numbering_xml_file = self.document.part.numbering_part
-            self.numbering_xml_tree = self.numbering_xml_file._element
-        except KeyError as _ke:
-            raise NumberingIsNotExists(
-                path
-            )
-
-    def save(self, path: str = None):
-        if path is None:
-            self.document.save(self.path)
-        else:
-            self.document.save(path)
-
-    @property
-    def __get_schema_numId(self) -> str:
-        return f'{{{schemas["w"]}}}numId'
-
-    @property
-    def __get_schema_abstractNumId(self) -> str:
-        return f'{{{schemas["w"]}}}abstractNumId'
-
-    @property
-    def __get_new_numId(self) -> int:
-        num_elements = self.numbering_xml_tree.findall(
-            './/w:num', namespaces=self.numbering_xml_file._element.nsmap
-        )
-        return 1 + max(int(num.get(self.__get_schema_numId)) for num in num_elements)
-
-    @property
-    def __get_new_abstractId(self) -> int:
-        anum_elements = self.numbering_xml_tree.findall(
-            './/w:abstractNum', namespaces=self.numbering_xml_file._element.nsmap
-        )
-        return 1 + max(int(anum.get(self.__get_schema_abstractNumId)) for anum in anum_elements)
-
-    def add_new_num(self) -> None:
-        """
-        !!! Непонятно для чего durableId
-        """
-        num_element = parse_xml(f'''
-            <w:num xmlns:w="{schemas["w"]}" xmlns:w16cid="{schemas["w16cid"]}" w:numId="{self.__get_new_numId}" w16cid:durableId="0">
-                <w:abstractNumId w:val="{self.__get_new_abstractId}"/>
-            </w:num>
-        ''')
-        self.numbering_xml_tree.append(num_element)
-        if self.autosave:
-            self.document.save(self.path)
-
-    def add_new_abstractNum(self) -> None:
-        """
-        !!! Много аттрибутов, непонятно какие нужны и за что отвечают
-        !!! Проблема с bullet list, как различать различные символы, пока только о
-        """
-        lvl_atr_dec = '''<w:start w:val="1"/>
-                        <w:numFmt w:val="decimal"/>
-                        <w:lvlText w:val="%1."/>
-                        <w:lvlJc w:val="left"/>'''
-        lvl_atr_bullet = '''<w:start w:val="1"/>
-                        <w:numFmt w:val="bullet"/>
-                        <w:lvlText w:val="o"/>
-                        <w:lvlJc w:val="left"/>'''
-        abstract_num_element = parse_xml(f'''
-                <w:abstractNum xmlns:w="{schemas["w"]}" w:abstractNumId="{self.__get_new_abstractId}">
-                    <w:nsid w:val="0"/>
-                    <w:multiLevelType w:val="hybridMultilevel"/>
-                    <w:tmpl w:val="0"/>
-                    <w:lvl w:ilvl="0">
-                        <w:start w:val="1"/>
-                        <w:numFmt w:val="decimal"/>
-                        <w:lvlText w:val="%1."/>
-                        <w:lvlJc w:val="left"/>
-                        <w:pPr>
-                            <w:ind w:left="720" w:hanging="360"/>
-                        </w:pPr>
-                        <w:rPr>
-                            <w:rFonts w:ascii="default"/>
-                        </w:rPr>
-                    </w:lvl>
-                </w:abstractNum>
-            ''')
-        self.numbering_xml_tree.append(abstract_num_element)
-        if self.autosave:
-            self.document.save(self.path)
-
-
-example_abstract_decimal = '''
-    <w:abstractNum w:abstractNumId="2">
-        <w:nsid w:val="0"/>
-        <w:multiLevelType w:val="hybridMultilevel"/>
-        <w:tmpl w:val="0"/>
-        <w:lvl w:ilvl="0">
-            <w:start w:val="1"/>
-            <w:numFmt w:val="decimal"/>
-            <w:lvlText w:val="%1."/>
-            <w:lvlJc w:val="left"/>
-            <w:pPr>
-                <w:ind w:left="720" w:hanging="360"/>
-            </w:pPr>
-            <w:rPr>
-                <w:rFonts w:ascii="default"/>
-            </w:rPr>
-        </w:lvl>
-    </w:abstractNum>
-'''
-
-example_abstract_bullet = '''
-    <w:abstractNum w:abstractNumId="3">
-        <w:nsid w:val="0"/>
-        <w:multiLevelType w:val="hybridMultilevel"/>
-        <w:tmpl w:val="0"/>
-        <w:lvl w:ilvl="0">
-            <w:start w:val="1"/>
-            <w:numFmt w:val="bullet"/>
-            <w:lvlText w:val=""/>
-            <w:lvlJc w:val="left"/>
-            <w:pPr>
-                <w:ind w:left="720" w:hanging="360"/>
-            </w:pPr>
-            <w:rPr>
-                <w:rFonts w:ascii="Symbol" w:eastAsiaTheme="minorHAnsi" w:hAnsi="Symbol" w:cstheme="minorBidi"
-                          w:hint="default"/>
-            </w:rPr>
-        </w:lvl>
-    </w:abstractNum>
-'''
-
-example_num = '''
-    <w:num w:numId="3" w16cid:durableId="0">
-        <w:abstractNumId w:val="2"/>
-    </w:num>
-'''
+    def __create_ilvl(self, is_decimal: bool) -> Element:
+        i_lvl = ET.Element(f'{{{schemas.w}}}lvl', {f'{{{schemas.w}}}ilvl': '0'})
+        i_lvl.append(ET.Element(f'{{{schemas.w}}}start', {f'{{{schemas.w}}}val': '1'}))
+        i_lvl.append(ET.Element(f'{{{schemas.w}}}numFmt',
+                                {f'{{{schemas.w}}}val': 'decimal' if is_decimal else 'bullet'}))
+        i_lvl.append(ET.Element(f'{{{schemas.w}}}lvlText',
+                                {f'{{{schemas.w}}}val': '%1.' if is_decimal else ''}))
+        i_lvl.append(ET.Element(f'{{{schemas.w}}}lvlJc', {f'{{{schemas.w}}}val': 'left'}))
+        temp_lem = ET.Element(f'{{{schemas.w}}}pPr')
+        temp_lem.append(ET.Element(
+            f'{{{schemas.w}}}ind',
+            {f'{{{schemas.w}}}left': '720', f'{{{schemas.w}}}hanging': '360'}
+        ))
+        i_lvl.append(temp_lem)
+        temp_lem = ET.Element(f'{{{schemas.w}}}rPr')
+        temp_lem.append(ET.Element(f'{{{schemas.w}}}rFonts',
+                                   {f'{{{schemas.w}}}hint': 'default'}))
+        i_lvl.append(temp_lem)
+        return i_lvl
