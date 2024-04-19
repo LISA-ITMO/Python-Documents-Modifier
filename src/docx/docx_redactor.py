@@ -2,12 +2,14 @@ from docx import Document
 from docx.shared import Pt
 from docx.text.paragraph import Paragraph
 from docx.text.run import Run
+from src.docx.xml_redactor import XMLRedactor
 from src.docx.enum.schemas import schemas
 from src.docx.enum.color import Color
 from src.docx.enum.font_style import FontStyle
+from src.docx.enum.ListStyle import ListStyle
 from src.docx.enum.underline_style import UnderlineStyle
 from src.exceptions.docx_exceptions import NotSupportedFormat, ParagraphNotFound
-from typing import List, Dict
+from typing import List, Dict, Union
 
 
 class DOCXRedactor:
@@ -64,6 +66,30 @@ class DOCXRedactor:
             raise ParagraphNotFound(
                 paraId
             )
+
+    def edit_comment_by_id(self, comment_id: Union[str, int], comment_text: str, new_author: str = None):
+        xed = XMLRedactor(self.path)
+        xed.edit_comment_by_id(comment_id, comment_text, new_author)
+        xed.save()
+        if self.autosave:
+            self.save()
+
+    def delete_comment_by_id(self, comment_id: Union[str, int]):
+        xed = XMLRedactor(self.path)
+        xed.delete_comment_by_id(comment_id)
+        if self.autosave:
+            self.save()
+
+    def edit_list_style_by_paraIds(self, paraIds: Union[list[str], str],
+                                   list_style: ListStyle = ListStyle.decimal,
+                                   bullet_symbol: str = '•'):
+        xed = XMLRedactor(self.path)
+        new_num = xed.add_new_abstract_and_num(list_style=list_style.decimal, levels_count=8,
+                                               bullet_symbol=bullet_symbol)
+        xed.edit_list_style_by_paraIds(paraIds, new_num)
+        xed.save()
+        if self.autosave:
+            self.save()
 
     def all_para_attributes(self) -> List[Dict[str, str]]:
         """

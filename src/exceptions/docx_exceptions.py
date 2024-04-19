@@ -23,10 +23,26 @@ class ParagraphNotFound(Exception):
         super().__init__(f'Paragraph with paraId \'{paraId}\' not found')
 
 
-class NumberingIsNotExists(Exception):
+class NumberingDoesNotExist(Exception):
     """
     The error called when you try to open DOCX-file, that doesn't contain
     word/numbering.xml file
     """
     def __int__(self, path: str) -> None:
         super().__init__(f'File \'{path}\' does not contain \'numbering.xml\'')
+
+
+class ParagraphDoesNotContainNumPr(Exception):
+    """
+    The error called when you try to replace num-value for paragraph, which doesn't have num
+    """
+    def __init__(self, paraId: str) -> None:
+        super().__init__(f'Paragraph with paraId \'{paraId}\' does not contain numPr')
+
+
+class ILvlDoesNotExist(Exception):
+    """
+    The error called when you try created ilvl with number not from range [0; 8]
+    """
+    def __init__(self, num: int):
+        super().__init__(f'Ilvl with number \'{num}\' can\'t be created (range 0-8)')
