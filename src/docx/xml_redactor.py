@@ -5,8 +5,8 @@ import tempfile
 import atexit
 import xml.etree.ElementTree as ET
 from xml.etree.ElementTree import Element
-from typing import Union, Tuple
-from src.exceptions.docx_exceptions import ParagraphDoesNotContainNumPr, ILvlDoesNotExist
+from typing import Union, Tuple, Dict, List
+from src.exceptions.docx_exceptions import *
 from src.docx.enum.schemas import schemas
 
 
@@ -17,6 +17,14 @@ class XMLRedactor:
     Else DOCX-file after editing will contain wrong namespace
     """
     def __init__(self, path: str):
+        if len(path) < 5 or len(path) > 255:
+            raise NameError(
+                f'\'{path}\' can\'t be open'
+            )
+        if path[-5:] != '.docx':
+            raise NotSupportedFormat(
+                path
+            )
         self.path: str = path
         self._temp_dir: str = tempfile.mkdtemp()
         self.encoding: str = 'utf-8'
@@ -24,14 +32,23 @@ class XMLRedactor:
         self.__extract_files()
 
     def __rm_temp_dir(self):
+        """
+        Remove temp directory, when program is interrupted
+        """
         if self._temp_dir:
             shutil.rmtree(self._temp_dir, ignore_errors=True)
 
     def __extract_files(self):
+        """
+        Extracting files in temp directory
+        """
         with zipfile.ZipFile(self.path, 'r') as zr:
             zr.extractall(self._temp_dir)
 
-    def __get_ilvl_marking(self) -> dict[int, Tuple[int, int]]:
+    def __get_ilvl_marking(self) -> Dict[int, Tuple[int, int]]:
+        """
+        Getting ilvl marking
+        """
         return {
             0: (720, 360),
             1: (1440, 360),
@@ -45,9 +62,15 @@ class XMLRedactor:
         }
 
     def delete_comment_by_id(self, comment_id: Union[int, str]):
+        """
+        :param comment_id: id of comment, that should be deleted
+        """
         for k, v in schemas.to_namespace.items():
             ET.register_namespace(k, v)
-        tree = ET.parse(os.path.join(self._temp_dir, 'word', 'document.xml'))
+        try:
+            tree = ET.parse(os.path.join(self._temp_dir, 'word', 'document.xml'))
+        except FileNotFoundError as _fe:
+            raise FileDoesNotContainXMLFile(self.path, 'document.xml')
         root = tree.getroot()
         for para in root.iter(f'{{{schemas.w}}}p'):
             for element in para:
@@ -66,11 +89,19 @@ class XMLRedactor:
                    encoding=self.encoding)
 
     def edit_comment_by_id(self, comment_id: Union[int, str], comment_text: str, new_author: str = None):
+        """
+        :param comment_id: id of comment, that should be edited
+        :param comment_text: new text of comment
+        :param new_author: new author of comment
+        """
         para_count = 0
         remove_queue = {}
         for k, v in schemas.to_namespace.items():
             ET.register_namespace(k, v)
-        tree = ET.parse(os.path.join(self._temp_dir, 'word', 'comments.xml'))
+        try:
+            tree = ET.parse(os.path.join(self._temp_dir, 'word', 'comments.xml'))
+        except FileNotFoundError as _fe:
+            raise FileDoesNotContainXMLFile(self.path, 'comments.xml')
         root = tree.getroot()
         for comment in root:
             if comment.attrib[f'{{{schemas.w}}}id'] == str(comment_id):
@@ -95,6 +126,10 @@ class XMLRedactor:
 
 
     def save(self, path: str = None):
+        """
+        Save changes to files
+        :param path: path to new files
+        """
         if path is None:
             path = self.path
         with zipfile.ZipFile(path, 'w') as zw:
@@ -112,7 +147,10 @@ class XMLRedactor:
         """
         for k, v in schemas.to_namespace.items():
             ET.register_namespace(k, v)
-        tree = ET.parse(os.path.join(self._temp_dir, 'word', 'numbering.xml'))
+        try:
+            tree = ET.parse(os.path.join(self._temp_dir, 'word', 'numbering.xml'))
+        except FileNotFoundError as _fe:
+            raise FileDoesNotContainXMLFile(self.path, 'numbering.xml')
         root = tree.getroot()
         max_abstract = -1
         max_num = 0
@@ -144,6 +182,9 @@ class XMLRedactor:
         return max_num + 1
 
     def __create_ilvl(self, is_decimal: bool, i_lvl: int = 0, bullet_symbol: str = '•') -> Element:
+        """
+        Create ilvl-Element for new abstractNum
+        """
         if not (0 <= i_lvl <= 8):
             raise ILvlDoesNotExist(i_lvl)
         params = self.__get_ilvl_marking()[i_lvl]
@@ -166,7 +207,7 @@ class XMLRedactor:
         i_lvl.append(temp_lem)
         return i_lvl
 
-    def edit_list_style_by_paraIds(self, paraIds: Union[list[str], str],
+    def edit_list_style_by_paraIds(self, paraIds: Union[List[str], str],
                                    new_num: Union[str, int]):
         """
         Replace the numId to newNum of all specified paragraphs
@@ -176,7 +217,12 @@ class XMLRedactor:
         """
         if isinstance(paraIds, str):
             paraIds = [paraIds]
-        tree = ET.parse(os.path.join(self._temp_dir, 'word', 'document.xml'))
+        for k, v in schemas.to_namespace.items():
+            ET.register_namespace(k, v)
+        try:
+            tree = ET.parse(os.path.join(self._temp_dir, 'word', 'document.xml'))
+        except FileNotFoundError as _fe:
+            raise FileDoesNotContainXMLFile(self.path, 'document.xml')
         root = tree.getroot()
         for paragraph in root.iter(f'{{{schemas.w}}}p'):
             if paragraph.attrib[f'{{{schemas.w14}}}paraId'] in paraIds:
@@ -191,3 +237,20 @@ class XMLRedactor:
                     raise ParagraphDoesNotContainNumPr(paragraph.attrib[f'{{{schemas.w14}}}paraId'])
         tree.write(os.path.join(self._temp_dir, 'word', 'document.xml'), xml_declaration=True,
                    encoding='utf-8')
+
+    def get_all_para_attributes(self) -> List[Dict[str, str]]:
+        """
+        Get all paragraphs in word/document.xml with their attributes
+        :return: List of attributes with their values
+        """
+        try:
+            tree = ET.parse(os.path.join(self._temp_dir, 'word', 'document.xml'))
+        except FileNotFoundError as _fe:
+            raise FileDoesNotContainXMLFile(self.path, 'document.xml')
+        root = tree.getroot()
+        paragraphs = []
+        for paragraph in root.iter(f'{{{schemas.w}}}p'):
+            paragraphs.append(paragraph.attrib)
+        return paragraphs
+
+
