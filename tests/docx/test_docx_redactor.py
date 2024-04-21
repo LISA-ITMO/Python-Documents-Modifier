@@ -23,19 +23,15 @@ class TestDocxRedactor(unittest.TestCase):
         doc = DOCXRedactor(join(self.root, 'file.docx'))
         paraId = doc.all_para_attributes()[0].values()[0]
         doc.add_comment_by_id(paraId, 'comment', 'author')
-        doc.save('output_file.docx')
-        doc = DOCXRedactor(join(self.root, 'output_file.docx'))
         doc.edit_comment_by_id('0', 'new_comment', 'new_author')
-        doc.save()
+        doc.save('output_file.docx')
 
     def test_delete_comment_by_id(self):
         doc = DOCXRedactor(join(self.root, 'file.docx'))
         paraId = doc.all_para_attributes()[0].values()[0]
         doc.add_comment_by_id(paraId, 'comment', 'author')
-        doc.save('output_file.docx')
-        doc = DOCXRedactor(join(self.root, 'output_file.docx'))
         doc.delete_comment_by_id('0')
-        doc.save()
+        doc.save('output_file.docx')
 
     def test_edit_list_style(self):
         doc = DOCXRedactor(join(self.root, 'file.docx'))
