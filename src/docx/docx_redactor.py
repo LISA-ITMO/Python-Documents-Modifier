@@ -13,7 +13,7 @@ from src.exceptions.docx_exceptions import NotSupportedFormat, ParagraphNotFound
 from typing import List, Dict, Union
 
 
-def open_docx_file(func):
+def _open_docx_file(func):
     def wrapper(self, *args, **kwargs):
         document = Document(self._temp_file)
         res = func(self, document=document, *args, **kwargs)
@@ -23,7 +23,7 @@ def open_docx_file(func):
     return wrapper
 
 
-def open_xml_redactor(func):
+def _open_xml_redactor(func):
     def wrapper(self, *args, **kwargs):
         xr = XMLRedactor(self._temp_file)
         res = func(self, _xml_redactor=xr, *args, **kwargs)
@@ -64,11 +64,12 @@ class DOCXRedactor:
             path = self.path
         shutil.move(self._temp_file, path)
 
-    @open_docx_file
+    @_open_docx_file
     def add_comment_by_id(self, paraId: str, comment: str, author: str = 'EDocx',
                           document=None) -> None:
         """
         Add comment to paragraph by paraId
+        :param document: Document-object, that generate automatic by decorator
         :param paraId: paragraph id
         :param comment: a comment
         :param author: author's nickname
@@ -82,7 +83,7 @@ class DOCXRedactor:
                 paraId
             )
 
-    @open_xml_redactor
+    @_open_xml_redactor
     def edit_comment_by_id(self, comment_id: Union[str, int],
                            comment_text: str, new_author: str = None,
                            _xml_redactor: XMLRedactor = None):
@@ -95,7 +96,7 @@ class DOCXRedactor:
         """
         _xml_redactor.edit_comment_by_id(comment_id, comment_text, new_author)
 
-    @open_xml_redactor
+    @_open_xml_redactor
     def delete_comment_by_id(self, comment_id: Union[str, int], _xml_redactor: XMLRedactor = None):
         """
         :param _xml_redactor: XMLRedactor-object, automatic generate by decorator
@@ -103,7 +104,7 @@ class DOCXRedactor:
         """
         _xml_redactor.delete_comment_by_id(comment_id)
 
-    @open_xml_redactor
+    @_open_xml_redactor
     def edit_list_style_by_paraIds(self, paraIds: Union[List[str], str],
                                    list_style: bool = ListStyle.decimal,
                                    bullet_symbol: str = '•', _xml_redactor: XMLRedactor = None):
@@ -118,7 +119,7 @@ class DOCXRedactor:
                                                          bullet_symbol=bullet_symbol)
         _xml_redactor.edit_list_style_by_paraIds(paraIds, new_num)
 
-    @open_docx_file
+    @_open_docx_file
     def all_para_attributes(self, document=None) -> List[Dict[str, str]]:
         """
         Get all attributes from all paragraphs
@@ -129,7 +130,7 @@ class DOCXRedactor:
             attributes.append(para.paragraph_format.element.attrib)
         return attributes
 
-    @open_docx_file
+    @_open_docx_file
     def edit_style_by_id(self, paraId: str,
                          size: int = None, color: Color = None,
                          fontStyle: FontStyle = None,
