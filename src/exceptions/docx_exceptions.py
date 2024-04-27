@@ -46,3 +46,21 @@ class FileDoesNotContainXMLFile(Exception):
     """
     def __init__(self, path: str, file: str):
         super().__init__(f'DOCX-archive \'{path}\' doesn\'t contain file \'{file}\'')
+
+
+class IncorrectILvlMarkingDict(Exception):
+    """
+    The error called when program try to get indentations from custom ilvl_marking-dict by
+    Non-existent level
+    Example: you specified 8 levels in abstractNum, but ilvl_marking-dict contains only 7 values
+    """
+    def __init__(self, ind: int):
+        super().__init__(f'Your ilvl_marking-dict doesn\'t contain key \'{ind}\'')
+
+
+class InvalidAttributeKey(Exception):
+    """
+    The error called when you try to get value of attribute, that doesn't exist
+    """
+    def __init__(self, tag: str, key: str):
+        super().__init__(f'Element with tag \'{tag}\' doesn\'t have attribute with key \'{key}\'')

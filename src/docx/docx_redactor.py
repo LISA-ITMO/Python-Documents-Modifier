@@ -38,7 +38,7 @@ class DOCXRedactor:
     Class for edit DOCX document objects
     """
 
-    def __init__(self, path: str) -> None:
+    def __init__(self, path: str):
         """
         :param path: path to DOCX document
         """
@@ -56,7 +56,7 @@ class DOCXRedactor:
     def __init_temp_file(self) -> str:
         return shutil.copy(self.path, tempfile.mkdtemp())
 
-    def save(self, path=None) -> None:
+    def save(self, path=None):
         """
         Method for save changes in document
         """
@@ -66,7 +66,7 @@ class DOCXRedactor:
 
     @_open_docx_file
     def add_comment_by_id(self, paraId: str, comment: str, author: str = 'EDocx',
-                          document=None) -> None:
+                          document=None):
         """
         Add comment to paragraph by paraId
         :param document: Document-object, that generate automatic by decorator
@@ -136,14 +136,12 @@ class DOCXRedactor:
                          fontStyle: FontStyle = None,
                          italic: bool = None, bold: bool = None,
                          underline: UnderlineStyle = None,
-                         document=None) -> None:
+                         document=None):
         """
         Edit font style of paragraph by paraId
         """
-        flag = False
         for para in document.paragraphs:
             if para.paragraph_format.element.attrib[f'{{{schemas.w14}}}paraId'] == paraId:
-                flag = True
                 for run in para.runs:
                     self.__edit_font_size(run, size)
                     self.__edit_text_color(run, color)
@@ -151,27 +149,27 @@ class DOCXRedactor:
                     self.__edit_italic(run, italic)
                     self.__edit_bold(run, bold)
                     self.__edit_underline(run, underline)
-        if not flag:
+        else:
             raise ParagraphNotFound(paraId)
 
 
-    def __edit_font_size(self, run: Run, size: int) -> None:
+    def __edit_font_size(self, run: Run, size: int):
         if size is not None:
             run.font.size = Pt(size)
 
-    def __edit_text_color(self, run: Run, color: Color) -> None:
+    def __edit_text_color(self, run: Run, color: Color):
         if color is not None:
             run.font.color.rgb = color
 
-    def __edit_font_style(self, run: Run, fontStyle: FontStyle) -> None:
+    def __edit_font_style(self, run: Run, fontStyle: FontStyle):
         if fontStyle is not None:
             run.font.name = fontStyle
 
-    def __edit_italic(self, run: Run, italic: bool) -> None:
+    def __edit_italic(self, run: Run, italic: bool):
         if italic is not None:
             run.font.italic = italic
 
-    def __edit_bold(self, run: Run, bold: bool) -> None:
+    def __edit_bold(self, run: Run, bold: bool):
         if bold is not None:
             run.font.bold = bold
 

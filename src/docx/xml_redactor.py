@@ -4,7 +4,7 @@ import shutil
 import tempfile
 import atexit
 import xml.etree.ElementTree as ET
-from xml.etree.ElementTree import Element
+from xml.etree.ElementTree import Element, ElementTree
 from typing import Union, Tuple, Dict, List
 from src.exceptions.docx_exceptions import *
 from src.docx.enum.schemas import schemas
@@ -38,6 +38,12 @@ class XMLRedactor:
         if self._temp_dir:
             shutil.rmtree(self._temp_dir, ignore_errors=True)
 
+    def __attrib(self, element: Element, key: str) -> str:
+        try:
+            return element.attrib[key]
+        except KeyError as _ke:
+            raise InvalidAttributeKey(element.tag, key)
+
     def __extract_files(self):
         """
         Extracting files in temp directory
@@ -47,7 +53,7 @@ class XMLRedactor:
 
     def __get_ilvl_marking(self) -> Dict[int, Tuple[int, int]]:
         """
-        Getting ilvl marking
+        Getting default ilvl marking
         """
         return {
             0: (720, 360),
@@ -61,29 +67,32 @@ class XMLRedactor:
             8: (6480, 360)
         }
 
+    def __get_tree(self, path: str) -> ElementTree:
+        try:
+            return ET.parse(os.path.join(self._temp_dir, 'word', path))
+        except FileNotFoundError as _fe:
+            raise FileDoesNotContainXMLFile(self.path, path)
+
     def delete_comment_by_id(self, comment_id: Union[int, str]):
         """
         :param comment_id: id of comment, that should be deleted
         """
         for k, v in schemas.to_namespace.items():
             ET.register_namespace(k, v)
-        try:
-            tree = ET.parse(os.path.join(self._temp_dir, 'word', 'document.xml'))
-        except FileNotFoundError as _fe:
-            raise FileDoesNotContainXMLFile(self.path, 'document.xml')
+        tree = self.__get_tree('document.xml')
         root = tree.getroot()
         for para in root.iter(f'{{{schemas.w}}}p'):
             for element in para:
                 if element.tag == f'{{{schemas.w}}}commentRangeStart':
-                    if element.attrib[f'{{{schemas.w}}}id'] == str(comment_id):
+                    if self.__attrib(element, f'{{{schemas.w}}}id') == str(comment_id):
                         para.remove(element)
                 if element.tag == f'{{{schemas.w}}}commentRangeEnd':
-                    if element.attrib[f'{{{schemas.w}}}id'] == str(comment_id):
+                    if self.__attrib(element, f'{{{schemas.w}}}id') == str(comment_id):
                         para.remove(element)
                 if element.tag == f'{{{schemas.w}}}r':
                     for sub_elem in element:
                         if sub_elem.tag == f'{{{schemas.w}}}commentReference':
-                            if sub_elem.attrib[f'{{{schemas.w}}}id'] == str(comment_id):
+                            if self.__attrib(sub_elem, f'{{{schemas.w}}}id') == str(comment_id):
                                 para.remove(element)
         tree.write(os.path.join(self._temp_dir, 'word', 'document.xml'), xml_declaration=True,
                    encoding=self.encoding)
@@ -98,13 +107,10 @@ class XMLRedactor:
         remove_queue = {}
         for k, v in schemas.to_namespace.items():
             ET.register_namespace(k, v)
-        try:
-            tree = ET.parse(os.path.join(self._temp_dir, 'word', 'comments.xml'))
-        except FileNotFoundError as _fe:
-            raise FileDoesNotContainXMLFile(self.path, 'comments.xml')
+        tree = self.__get_tree('comments.xml')
         root = tree.getroot()
         for comment in root:
-            if comment.attrib[f'{{{schemas.w}}}id'] == str(comment_id):
+            if self.__attrib(comment, f'{{{schemas.w}}}id') == str(comment_id):
                 if new_author is not None:
                     comment.attrib[f'{{{schemas.w}}}author'] = new_author
                 for paragraph in comment:
@@ -139,7 +145,8 @@ class XMLRedactor:
                     zw.write(file_path, os.path.relpath(file_path, self._temp_dir))
 
     def add_new_abstract_and_num(self, list_style: bool = True, levels_count: int = 1,
-                                 bullet_symbol: str = '•') -> int:
+                                 bullet_symbol: str = '•',
+                                 custom_ilvl_marking: Dict[int, Tuple[int, int]] = None) -> int:
         """
         This function added new abstractNum and num
         list_style -- True: decimal, False: bullet
@@ -147,10 +154,7 @@ class XMLRedactor:
         """
         for k, v in schemas.to_namespace.items():
             ET.register_namespace(k, v)
-        try:
-            tree = ET.parse(os.path.join(self._temp_dir, 'word', 'numbering.xml'))
-        except FileNotFoundError as _fe:
-            raise FileDoesNotContainXMLFile(self.path, 'numbering.xml')
+        tree = self.__get_tree('numbering.xml')
         root = tree.getroot()
         max_abstract = -1
         max_num = 0
@@ -166,7 +170,12 @@ class XMLRedactor:
             f'{{{schemas.w}}}val': 'hybridMultilevel'
         }))
         for i in range(levels_count):
-            insert_abstract.append(self.__create_ilvl(list_style, i, bullet_symbol))
+            try:
+                insert_abstract.append(self.__create_ilvl(list_style, i, bullet_symbol,
+                                                          custom_ilvl_marking[i]))
+            except KeyError as _ke:
+                raise IncorrectILvlMarkingDict(i)
+
         insert_num = ET.Element(f'{{{schemas.w}}}num', {
             f'{{{schemas.w}}}numId': str(max_num + 1),
             f'{{{schemas.w16cid}}}durableId': '0'
@@ -181,13 +190,15 @@ class XMLRedactor:
                    encoding=self.encoding)
         return max_num + 1
 
-    def __create_ilvl(self, is_decimal: bool, i_lvl: int = 0, bullet_symbol: str = '•') -> Element:
+    def __create_ilvl(self, is_decimal: bool, i_lvl: int = 0, bullet_symbol: str = '•',
+                      ilvl_marking: Tuple[int, int] = None) -> Element:
         """
         Create ilvl-Element for new abstractNum
         """
         if not (0 <= i_lvl <= 8):
             raise ILvlDoesNotExist(i_lvl)
-        params = self.__get_ilvl_marking()[i_lvl]
+        if ilvl_marking is None:
+            ilvl_marking = self.__get_ilvl_marking()[i_lvl]
         i_lvl = ET.Element(f'{{{schemas.w}}}lvl', {f'{{{schemas.w}}}ilvl': str(i_lvl)})
         i_lvl.append(ET.Element(f'{{{schemas.w}}}start', {f'{{{schemas.w}}}val': '1'}))
         i_lvl.append(ET.Element(f'{{{schemas.w}}}numFmt',
@@ -198,7 +209,7 @@ class XMLRedactor:
         temp_lem = ET.Element(f'{{{schemas.w}}}pPr')
         temp_lem.append(ET.Element(
             f'{{{schemas.w}}}ind',
-            {f'{{{schemas.w}}}left': str(params[0]), f'{{{schemas.w}}}hanging': str(params[1])}
+            {f'{{{schemas.w}}}left': str(ilvl_marking[0]), f'{{{schemas.w}}}hanging': str(ilvl_marking[1])}
         ))
         i_lvl.append(temp_lem)
         temp_lem = ET.Element(f'{{{schemas.w}}}rPr')
@@ -219,13 +230,10 @@ class XMLRedactor:
             paraIds = [paraIds]
         for k, v in schemas.to_namespace.items():
             ET.register_namespace(k, v)
-        try:
-            tree = ET.parse(os.path.join(self._temp_dir, 'word', 'document.xml'))
-        except FileNotFoundError as _fe:
-            raise FileDoesNotContainXMLFile(self.path, 'document.xml')
+        tree = self.__get_tree('document.xml')
         root = tree.getroot()
         for paragraph in root.iter(f'{{{schemas.w}}}p'):
-            if paragraph.attrib[f'{{{schemas.w14}}}paraId'] in paraIds:
+            if self.__attrib(paragraph, f'{{{schemas.w14}}}paraId') in paraIds:
                 try:
                     cnt = 0
                     for num in paragraph.iter(f'{{{schemas.w}}}numId'):
@@ -243,14 +251,9 @@ class XMLRedactor:
         Get all paragraphs in word/document.xml with their attributes
         :return: List of attributes with their values
         """
-        try:
-            tree = ET.parse(os.path.join(self._temp_dir, 'word', 'document.xml'))
-        except FileNotFoundError as _fe:
-            raise FileDoesNotContainXMLFile(self.path, 'document.xml')
+        tree = self.__get_tree('document.xml')
         root = tree.getroot()
         paragraphs = []
         for paragraph in root.iter(f'{{{schemas.w}}}p'):
             paragraphs.append(paragraph.attrib)
         return paragraphs
-
-
