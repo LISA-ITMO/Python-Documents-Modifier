@@ -140,8 +140,10 @@ class DOCXRedactor:
         """
         Edit font style of paragraph by paraId
         """
+        flag = True
         for para in document.paragraphs:
             if para.paragraph_format.element.attrib[f'{{{schemas.w14}}}paraId'] == paraId:
+                flag = False
                 for run in para.runs:
                     self.__edit_font_size(run, size)
                     self.__edit_text_color(run, color)
@@ -149,7 +151,7 @@ class DOCXRedactor:
                     self.__edit_italic(run, italic)
                     self.__edit_bold(run, bold)
                     self.__edit_underline(run, underline)
-        else:
+        if flag:
             raise ParagraphNotFound(paraId)
 
 

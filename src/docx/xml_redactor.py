@@ -158,6 +158,10 @@ class XMLRedactor:
         root = tree.getroot()
         max_abstract = -1
         max_num = 0
+        if not (0 <= levels_count <= 8):
+            raise ILvlDoesNotExist(levels_count)
+        if custom_ilvl_marking is None:
+            custom_ilvl_marking = self.__get_ilvl_marking()
         for abstract_num in root.iter(f'{{{schemas.w}}}abstractNum'):
             max_abstract = max(max_abstract, int(abstract_num.attrib[f'{{{schemas.w}}}abstractNumId']))
         for num in root.iter(f'{{{schemas.w}}}num'):
@@ -195,10 +199,6 @@ class XMLRedactor:
         """
         Create ilvl-Element for new abstractNum
         """
-        if not (0 <= i_lvl <= 8):
-            raise ILvlDoesNotExist(i_lvl)
-        if ilvl_marking is None:
-            ilvl_marking = self.__get_ilvl_marking()[i_lvl]
         i_lvl = ET.Element(f'{{{schemas.w}}}lvl', {f'{{{schemas.w}}}ilvl': str(i_lvl)})
         i_lvl.append(ET.Element(f'{{{schemas.w}}}start', {f'{{{schemas.w}}}val': '1'}))
         i_lvl.append(ET.Element(f'{{{schemas.w}}}numFmt',
