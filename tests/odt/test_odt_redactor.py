@@ -1,12 +1,5 @@
-import os
-import sys
-from os.path import join, dirname, abspath
-
-parent_dir = os.path.abspath(os.path.join(os.path.dirname('.'), "."))
-sys.path.append(parent_dir)
-
 import unittest
-
+from os.path import join, dirname, abspath
 from src.odt.odtredactor import ODTRedactor
 
 class TestODTRedactor(unittest.TestCase):
