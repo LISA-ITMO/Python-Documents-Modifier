@@ -5,7 +5,6 @@ from src.odt.enum.namespaces import NameSpaces
 
 import zipfile
 import xml.etree.ElementTree as ET
-from odf.namespaces import nsdict
 
 class ODTRedactor:
     """Class for working with ODT documents"""
@@ -25,10 +24,6 @@ class ODTRedactor:
                     file_data[file] = f.read()
         self.data = file_data
         self.stringroot = ET.fromstring(self.data['content.xml'].decode('UTF-8'))
-
-        for i in nsdict:
-            if f"xmlns:{nsdict[i]}" in self.stringroot.attrib or i in self.stringroot.attrib.values(): continue
-            self.stringroot.attrib[f"xmlns:{nsdict[i]}"] = i
 
     def save_file(self) -> None:
         """Function for saving a file"""
