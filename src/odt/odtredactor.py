@@ -6,6 +6,8 @@ from src.odt.enum.namespaces import NameSpaces
 import zipfile
 import xml.etree.ElementTree as ET
 
+from typing import Union
+
 class ODTRedactor:
     """Class for working with ODT documents"""
     def __init__(self, path_input: str, path_output: str) -> None:
@@ -56,7 +58,7 @@ class ODTRedactor:
 
                 break
 
-    def delete_comment_by_id(self, name_id: int | str) -> None:
+    def delete_comment_by_id(self, name_id: Union[int, str]) -> None:
         """
         :param name_id: name_id of the annotation to be deleted
         """
