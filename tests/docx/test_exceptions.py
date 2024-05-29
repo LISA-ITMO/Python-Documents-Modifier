@@ -1,8 +1,10 @@
 import unittest
 from src.exceptions.docx_exceptions import *
 from src.docx.docx_redactor import DOCXRedactor
+from src.docx.xml_redactor import XMLRedactor
 from src.docx.enum.color import Color
-from docx.opc.exceptions import PackageNotFoundError
+from src.docx.enum.schemas import schemas
+from src.docx.enum.ListStyle import ListStyle
 from os.path import join, dirname, abspath
 
 
@@ -14,7 +16,7 @@ class TestExceptions(unittest.TestCase):
             DOCXRedactor(join(self.root, 'file.txt'))
 
     def test_supported_format(self):
-        with self.assertRaises(PackageNotFoundError):
+        with self.assertRaises(FileNotFoundError):
             DOCXRedactor(join(self.root, 'not_exists_file.docx'))
 
     def test_correct_file(self):
@@ -36,7 +38,34 @@ class TestExceptions(unittest.TestCase):
         doc = DOCXRedactor(join(self.root, 'file.docx'))
         para_id = doc.all_para_attributes()[0].values()[0]
         doc.edit_style_by_id(para_id, size=15)
-        doc.save()
+        doc.save('output_file.docx')
+
+    def test_paragraph_does_not_contain_numPr(self):
+        xr = XMLRedactor(join(self.root, 'file.docx'))
+        with self.assertRaises(ParagraphDoesNotContainNumPr):
+            first_paraId = xr.get_all_para_attributes()[0][f'{{{schemas.w14}}}paraId']
+            xr.edit_list_style_by_paraIds(first_paraId, 0)
+
+    def test_paragraph_contain_numPr(self):
+        xr = XMLRedactor(join(self.root, 'file.docx'))
+        second_paraId = xr.get_all_para_attributes()[1][f'{{{schemas.w14}}}paraId']
+        xr.edit_list_style_by_paraIds(second_paraId, 0)
+        xr.save('output_file.docx')
+
+    def test_ilvl_does_not_exist(self):
+        xr = XMLRedactor(join(self.root, 'file.docx'))
+        with self.assertRaises(ILvlDoesNotExist):
+            xr.add_new_abstract_and_num(ListStyle.bullet, 100, '*')
+
+    def test_ilvl_exist(self):
+        xr = XMLRedactor(join(self.root, 'file.docx'))
+        xr.add_new_abstract_and_num(ListStyle.bullet, 8, '*')
+        xr.save('output_file.docx')
+
+    def test_docx_does_not_contain_xml_file(self):
+        xr = XMLRedactor(join(self.root, 'file.docx'))
+        with self.assertRaises(FileDoesNotContainXMLFile):
+            xr.edit_comment_by_id('0', 'text', 'author')
 
 
 if __name__ == '__main__':
