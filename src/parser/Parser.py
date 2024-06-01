@@ -1,43 +1,36 @@
 import json
 import os
 import tempfile
-import sys
 import zipfile
 import xml.etree.ElementTree as ET
 from xml.etree.ElementTree import Element
 from src.docx.enum.schemas import schemas
-from typing import List, Optional, Dict
-from os.path import join, dirname, abspath
-import logging
-
-
-class Elem:
-    def __init__(self, num: str, text: str, anchor_id: str = None):
-        self.num: str = num
-        self.text: str = text
-        self.sub_elements: Optional[List[Elem]] = None
-        self.anchor_id: str = anchor_id
-
-    def append(self, elem):
-        if self.sub_elements is None:
-            self.sub_elements = []
-        self.sub_elements.append(elem)
-
-    def __len__(self):
-        return 0 if self.sub_elements is None else len(self.sub_elements)
+from src.parser.Elem import Elem
+from typing import List, Dict
 
 
 class Parser:
+    """
+    Class, that parses DOCX-document and saves it in json-format
+    :param self.path: path to file
+    :param self._temp_dir: path to the temp directory, where the unpacked DOCX-document is stored
+    """
     def __init__(self, path: str):
         self.path = path
         self._temp_dir = tempfile.mkdtemp()
         self._extract_files()
 
     def _extract_files(self):
+        """
+        Unpacks DOCX-document in temp directory
+        """
         with zipfile.ZipFile(self.path, 'r') as zr:
             zr.extractall(self._temp_dir)
 
     def parse(self):
+        """
+        Parses document.xml part and returns content and flag (potentially damaged)
+        """
         tree = ET.parse(os.path.join(self._temp_dir, 'word', 'document.xml'))
         root = tree.getroot()
         paragraphs = []
@@ -46,9 +39,12 @@ class Parser:
                 for para in content.iter(f'{{{schemas.w}}}p'):
                     paragraphs.append(para)
         return self._parse_paragraphs(paragraphs)
-    
+
     def parse_paragraphs_from_anchor(self, anchor_id: str,
                                      list_view: bool = True):
+        """
+        Parses text, that attached to a chapter by anchor_id
+        """
         tree = ET.parse(os.path.join(self._temp_dir, 'word', 'document.xml'))
         root = tree.getroot()
 
@@ -111,13 +107,19 @@ class Parser:
         return struct, potentially_damage
 
     def save(self, struct: Dict, path: str = None):
+        """
+        Save DOCX-document as JSON
+        """
         if path is None:
             path = self.path
         with open(f'{path[:-5]}.json', 'w', encoding='utf-8') as json_file:
-            json.dump(struct, json_file, indent=4, default=handle_none,
+            json.dump(struct, json_file, indent=4, default=_handle_none,
                       ensure_ascii=False)
 
     def get_other_text(self):
+        """
+        Gets other text from a document
+        """
         tree = ET.parse(os.path.join(self._temp_dir, 'word', 'document.xml'))
         root = tree.getroot()
         all_text = ''
@@ -127,53 +129,7 @@ class Parser:
         return all_text
 
 
-def struct_to_dict(elements: List[Elem], p: Parser):
-    if elements is None:
-        return
-
-    def convert_element_to_dict(elem: Elem, p: Parser):
-        elem_dict = {
-            "num": elem.num,
-            "title": elem.text,
-            'text': p.parse_paragraphs_from_anchor(elem.anchor_id)
-        }
-        if elem.sub_elements:
-            elem_dict["sub_elements"] = [convert_element_to_dict(sub_elem, p) for sub_elem in elem.sub_elements]
-        return elem_dict
-    return [convert_element_to_dict(elem, p) for elem in elements]
-
-
-def handle_none(obj):
+def _handle_none(obj):
     if obj is None:
         return "null"
     return obj
-
-
-def iter_docs():
-    root = str(join(dirname(abspath(__file__))))
-    for filename in os.listdir(join(root, 'documents_for_extract')):
-        print(filename)
-
-
-def parsing_documents():
-    root_in = join(str(join(dirname(abspath(__file__)))), 'documents_for_extract')
-    root_out = join(str(join(dirname(abspath(__file__)))), 'test_out')
-    i = 1
-    c = len(os.listdir(root_in))
-    for filename in os.listdir(root_in):
-        try:
-            p = Parser(join(root_in, filename))
-            s, pot = p.parse()
-            n = {'potentially_damage': pot, 'table_of_content': struct_to_dict(s, p),
-                    'other_text': p.get_other_text()}
-            p.save(n, join(root_out, filename))
-        except Exception as _e:
-            logging.warn(_e)
-        finally:
-            sys.stdout.write(f"\rProgress: [{i} // {c}]")
-            sys.stdout.flush()
-            i += 1
-
-
-if __name__ == '__main__':
-    parsing_documents()

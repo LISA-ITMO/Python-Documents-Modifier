@@ -2,7 +2,7 @@ import unittest
 import json
 import os
 from os.path import join, dirname, abspath
-from src.parser.parser import *
+from src.parser.execution_part import *
 
 
 class TestDocxParser(unittest.TestCase):
