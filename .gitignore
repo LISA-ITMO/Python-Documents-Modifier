@@ -166,3 +166,6 @@ cython_debug/
 # Datasource local storage ignored files
 /dataSources/
 /dataSources.local.xml
+/test_folder
+/test_folder/
+test_folder
