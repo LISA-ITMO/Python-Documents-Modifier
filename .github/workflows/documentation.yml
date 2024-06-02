@@ -14,14 +14,24 @@ jobs:
       - name: Install dependencies
         run: |
           pip install sphinx sphinx_rtd_theme myst_parser
+
       - name: Sphinx build
         run: |
-          sphinx-build docs _build
+          python -m pip install -U sphinx
+          python -m pip install sphinx-rtd-theme
+          python -m pip install sphinx-autoapi
+
+      - name: make the sphinx docs
+        run: |
+          make -C docs clean 
+          # sphinx-apidoc -f -o docs/source . -H Test -e -t docs/source/_templates
+          make -C docs html
+
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         with:
           publish_branch: gh-pages
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: _build/
+          directory: ./docs/build/html
           force_orphan: true
