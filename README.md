@@ -3,17 +3,11 @@
 [![codecov](https://codecov.io/gh/LISA-ITMO/Python-Documents-Modifier/graph/badge.svg?token=QA6VQJE7AY)](https://codecov.io/gh/LISA-ITMO/Python-Documents-Modifier)
 
 # Python-Documents-Modifier
-
-___
 ![itmo](https://camo.githubusercontent.com/b9e4dd42874893b566fbc4c77daa19012408f5b5411a0625bb6b1a8e0212b39f/68747470733a2f2f69746d6f2e72752f66696c652f70616765732f3231332f6c6f676f5f6e615f706c6173686b655f727573736b69795f62656c79792e706e67)
 ## Description
-
-___
 The library for editing DOCX and ODT documents was developed to provide the necessary functionality when checking documents for compliance with standards.
 
 ## Features of library
-
-___
 The library provides the following features:
 * Adding comments ```DOCX & ODT```
 * Editing text style ```DOCX & ODT```
@@ -22,8 +16,6 @@ The library provides the following features:
 * Editing list style ```DOCX```
 
 ## Requirements
-
-___
 ```
 lxml==5.1.0
 python-docx==1.1.0
@@ -31,13 +23,9 @@ typing_extensions==4.9.0
 ```
 
 ## Installation
-
-___
 ```git clone https://github.com/LISA-ITMO/Python-Documents-Modifier.git```
 
 ## Getting started
-
-___
 Install the library, open your script and create an instance of the class
 ```pycon
 from src.docx.docx_redactor import DOCXRedactor
@@ -48,8 +36,6 @@ doc_odt = ODTRedactor('your_document.odt')
 ```
 
 ## Examples for using functions
-
-___
 1) Add a comment
     ```pycon
     paraId = '00F00080' # DOCX | ID of the paragraph to which you want to add a comment
@@ -110,16 +96,12 @@ ___
     ```
 
 ## Contacts
-
-___
 Your contacts. For example:
 
 slavamarcin@yandex.ru\
 vlad-tershch@yandex.ru
 
 ## Authors
-
-___
 [Shafikov Maxim](https://github.com/MrAmfix)\
 [Krylov Michael](https://github.com/Inf1nity2483)\
 [Tereshchenko Vladislav](https://github.com/Vl-Tershch)\
