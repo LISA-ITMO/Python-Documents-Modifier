@@ -21,6 +21,8 @@ lxml==5.1.0
 python-docx==1.1.0
 typing_extensions==4.9.0
 ```
+## Documentation
+The documentation is available at [the link](http://localhost:63342/PythonDM/docs/_build/html/index.html?_ijt=3t7o1rluk70bu9p5h72ba0abis&_ij_reload=RELOAD_ON_SAVE)
 
 ## Installation
 ```git clone https://github.com/LISA-ITMO/Python-Documents-Modifier.git```
