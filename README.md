@@ -4,7 +4,7 @@
 # Python-Documents-Modifier
 
 ## Description
-A library for changing individual objects of text documents.
+A library for changing individual objects of text documents
 
 ## Features
 ```in dev```
