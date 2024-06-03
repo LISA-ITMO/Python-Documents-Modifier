@@ -8,13 +8,10 @@
 
 import os
 import sys
-for x in os.walk('/Users/vladtereshch/PycharmProjects/PythonDM/src'):
+from os.path import dirname as up
+for x in os.walk(up(up(__file__)) + '/src/'):
   sys.path.insert(0, x[0])
 sys.path.insert(0, os.path.abspath('..'))
-
-site_packages = r'~/PycharmProjects/PythonDM/venv/lib/python3.9/site-packages'
-if site_packages not in sys.path:
-    sys.path.append(site_packages)
 
 project = 'Edulytica-PythonDM'
 copyright = '2024, Edulytica Team'
