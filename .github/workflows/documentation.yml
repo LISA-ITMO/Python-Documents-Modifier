@@ -28,6 +28,7 @@ jobs:
 
       - name: make the sphinx docs
         run: |
+          python docs_config.py
           make -C docs clean
           make -C docs html
 
