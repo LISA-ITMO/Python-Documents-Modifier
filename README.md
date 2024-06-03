@@ -103,6 +103,10 @@ Your contacts. For example:
 slavamarcin@yandex.ru\
 vlad-tershch@yandex.ru
 
+## Conferences
+1) XIII Конгресс молодых ученых ИТМО:
+   - Шафиков М.А., Терещенко В.В., Марцинкевич В.И., Крылов М.М. РАЗРАБОТКА БИБЛИОТЕКИ PYTHON ДЛЯ РЕДАКТИРОВАНИЯ ОБЪЕКТОВ ЭЛЕКТРОННЫХ ДОКУМЕНТОВ - 2024.
+
 ## Authors
 [Shafikov Maxim](https://github.com/MrAmfix)\
 [Krylov Michael](https://github.com/Inf1nity2483)\
