@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>docx.xml_redactor &#8212; Edulytica-PythonDM 0.0.1 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=d1102ebc" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=12dfc556" />
+    <script src="../../_static/documentation_options.js?v=d45e8c67"></script>
+    <script src="../../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for docx.xml_redactor</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">zipfile</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">shutil</span>
+<span class="kn">import</span> <span class="nn">tempfile</span>
+<span class="kn">import</span> <span class="nn">atexit</span>
+<span class="kn">import</span> <span class="nn">xml.etree.ElementTree</span> <span class="k">as</span> <span class="nn">ET</span>
+<span class="kn">from</span> <span class="nn">xml.etree.ElementTree</span> <span class="kn">import</span> <span class="n">Element</span><span class="p">,</span> <span class="n">ElementTree</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span>
+<span class="kn">from</span> <span class="nn">src.exceptions.docx_exceptions</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">src.docx.enum.schemas</span> <span class="kn">import</span> <span class="n">schemas</span>
+
+
+<div class="viewcode-block" id="XMLRedactor">
+<a class="viewcode-back" href="../../docx.html#docx.xml_redactor.XMLRedactor">[docs]</a>
+<span class="k">class</span> <span class="nc">XMLRedactor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    For correct work this class you should edit xml.etree.ElementTree</span>
+<span class="sd">    replace 862 line on : &quot;return qnames, _namespace_map&quot;</span>
+<span class="sd">    Else DOCX-file after editing will contain wrong namespace</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">5</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">255</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NameError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s1">&#39;</span><span class="se">\&#39;</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="se">\&#39;</span><span class="s1"> can</span><span class="se">\&#39;</span><span class="s1">t be open&#39;</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="n">path</span><span class="p">[</span><span class="o">-</span><span class="mi">5</span><span class="p">:]</span> <span class="o">!=</span> <span class="s1">&#39;.docx&#39;</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">NotSupportedFormat</span><span class="p">(</span>
+                <span class="n">path</span>
+            <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">path</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_temp_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">mkdtemp</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">encoding</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;utf-8&#39;</span>
+        <span class="n">atexit</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__rm_temp_dir</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__extract_files</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">__rm_temp_dir</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Remove temp directory, when program is interrupted</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_temp_dir</span><span class="p">:</span>
+            <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_temp_dir</span><span class="p">,</span> <span class="n">ignore_errors</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__attrib</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">element</span><span class="p">:</span> <span class="n">Element</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">element</span><span class="o">.</span><span class="n">attrib</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+        <span class="k">except</span> <span class="ne">KeyError</span> <span class="k">as</span> <span class="n">_ke</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">InvalidAttributeKey</span><span class="p">(</span><span class="n">element</span><span class="o">.</span><span class="n">tag</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__extract_files</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Extracting files in temp directory</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">with</span> <span class="n">zipfile</span><span class="o">.</span><span class="n">ZipFile</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">zr</span><span class="p">:</span>
+            <span class="n">zr</span><span class="o">.</span><span class="n">extractall</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_temp_dir</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__get_ilvl_marking</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Getting default ilvl marking</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="mi">0</span><span class="p">:</span> <span class="p">(</span><span class="mi">720</span><span class="p">,</span> <span class="mi">360</span><span class="p">),</span>
+            <span class="mi">1</span><span class="p">:</span> <span class="p">(</span><span class="mi">1440</span><span class="p">,</span> <span class="mi">360</span><span class="p">),</span>
+            <span class="mi">2</span><span class="p">:</span> <span class="p">(</span><span class="mi">2160</span><span class="p">,</span> <span class="mi">360</span><span class="p">),</span>
+            <span class="mi">3</span><span class="p">:</span> <span class="p">(</span><span class="mi">2880</span><span class="p">,</span> <span class="mi">360</span><span class="p">),</span>
+            <span class="mi">4</span><span class="p">:</span> <span class="p">(</span><span class="mi">3600</span><span class="p">,</span> <span class="mi">360</span><span class="p">),</span>
+            <span class="mi">5</span><span class="p">:</span> <span class="p">(</span><span class="mi">4320</span><span class="p">,</span> <span class="mi">360</span><span class="p">),</span>
+            <span class="mi">6</span><span class="p">:</span> <span class="p">(</span><span class="mi">5040</span><span class="p">,</span> <span class="mi">360</span><span class="p">),</span>
+            <span class="mi">7</span><span class="p">:</span> <span class="p">(</span><span class="mi">5760</span><span class="p">,</span> <span class="mi">360</span><span class="p">),</span>
+            <span class="mi">8</span><span class="p">:</span> <span class="p">(</span><span class="mi">6480</span><span class="p">,</span> <span class="mi">360</span><span class="p">)</span>
+        <span class="p">}</span>
+
+    <span class="k">def</span> <span class="nf">__get_tree</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ElementTree</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">ET</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_temp_dir</span><span class="p">,</span> <span class="s1">&#39;word&#39;</span><span class="p">,</span> <span class="n">path</span><span class="p">))</span>
+        <span class="k">except</span> <span class="ne">FileNotFoundError</span> <span class="k">as</span> <span class="n">_fe</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">FileDoesNotContainXMLFile</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+
+<div class="viewcode-block" id="XMLRedactor.delete_comment_by_id">
+<a class="viewcode-back" href="../../docx.html#docx.xml_redactor.XMLRedactor.delete_comment_by_id">[docs]</a>
+    <span class="k">def</span> <span class="nf">delete_comment_by_id</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">comment_id</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param comment_id: id of comment, that should be deleted</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">schemas</span><span class="o">.</span><span class="n">to_namespace</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">ET</span><span class="o">.</span><span class="n">register_namespace</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
+        <span class="n">tree</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__get_tree</span><span class="p">(</span><span class="s1">&#39;document.xml&#39;</span><span class="p">)</span>
+        <span class="n">root</span> <span class="o">=</span> <span class="n">tree</span><span class="o">.</span><span class="n">getroot</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">para</span> <span class="ow">in</span> <span class="n">root</span><span class="o">.</span><span class="n">iter</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="se">{{</span><span class="si">{</span><span class="n">schemas</span><span class="o">.</span><span class="n">w</span><span class="si">}</span><span class="se">}}</span><span class="s1">p&#39;</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">element</span> <span class="ow">in</span> <span class="n">para</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">element</span><span class="o">.</span><span class="n">tag</span> <span class="o">==</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="se">{{</span><span class="si">{</span><span class="n">schemas</span><span class="o">.</span><span class="n">w</span><span class="si">}</span><span class="se">}}</span><span class="s1">commentRangeStart&#39;</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">__attrib</span><span class="p">(</span><span class="n">element</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="se">{{</span><span class="si">{</span><span class="n">schemas</span><span class="o">.</span><span class="n">w</span><span class="si">}</span><span class="se">}}</span><span class="s1">id&#39;</span><span class="p">)</span> <span class="o">==</span> <span class="nb">str</span><span class="p">(</span><span class="n">comment_id</span><span class="p">):</span>
+                        <span class="n">para</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">element</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">element</span><span class="o">.</span><span class="n">tag</span> <span class="o">==</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="se">{{</span><span class="si">{</span><span class="n">schemas</span><span class="o">.</span><span class="n">w</span><span class="si">}</span><span class="se">}}</span><span class="s1">commentRangeEnd&#39;</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">__attrib</span><span class="p">(</span><span class="n">element</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="se">{{</span><span class="si">{</span><span class="n">schemas</span><span class="o">.</span><span class="n">w</span><span class="si">}</span><span class="se">}}</span><span class="s1">id&#39;</span><span class="p">)</span> <span class="o">==</span> <span class="nb">str</span><span class="p">(</span><span class="n">comment_id</span><span class="p">):</span>
+                        <span class="n">para</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">element</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">element</span><span class="o">.</span><span class="n">tag</span> <span class="o">==</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="se">{{</span><span class="si">{</span><span class="n">schemas</span><span class="o">.</span><span class="n">w</span><span class="si">}</span><span class="se">}}</span><span class="s1">r&#39;</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">sub_elem</span> <span class="ow">in</span> <span class="n">element</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="n">sub_elem</span><span class="o">.</span><span class="n">tag</span> <span class="o">==</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="se">{{</span><span class="si">{</span><span class="n">schemas</span><span class="o">.</span><span class="n">w</span><span class="si">}</span><span class="se">}}</span><span class="s1">commentReference&#39;</span><span class="p">:</span>
+                            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">__attrib</span><span class="p">(</span><span class="n">sub_elem</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="se">{{</span><span class="si">{</span><span class="n">schemas</span><span class="o">.</span><span class="n">w</span><span class="si">}</span><span class="se">}}</span><span class="s1">id&#39;</span><span class="p">)</span> <span class="o">==</span> <span class="nb">str</span><span class="p">(</span><span class="n">comment_id</span><span class="p">):</span>
+                                <span class="n">para</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">element</span><span class="p">)</span>
+        <span class="n">tree</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_temp_dir</span><span class="p">,</span> <span class="s1">&#39;word&#39;</span><span class="p">,</span> <span class="s1">&#39;document.xml&#39;</span><span class="p">),</span> <span class="n">xml_declaration</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                   <span class="n">encoding</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">encoding</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="XMLRedactor.edit_comment_by_id">
+<a class="viewcode-back" href="../../docx.html#docx.xml_redactor.XMLRedactor.edit_comment_by_id">[docs]</a>
+    <span class="k">def</span> <span class="nf">edit_comment_by_id</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">comment_id</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> <span class="n">comment_text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">new_author</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param comment_id: id of comment, that should be edited</span>
+<span class="sd">        :param comment_text: new text of comment</span>
+<span class="sd">        :param new_author: new author of comment</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">para_count</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">remove_queue</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">schemas</span><span class="o">.</span><span class="n">to_namespace</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">ET</span><span class="o">.</span><span class="n">register_namespace</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
+        <span class="n">tree</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__get_tree</span><span class="p">(</span><span class="s1">&#39;comments.xml&#39;</span><span class="p">)</span>
+        <span class="n">root</span> <span class="o">=</span> <span class="n">tree</span><span class="o">.</span><span class="n">getroot</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">comment</span> <span class="ow">in</span> <span class="n">root</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">__attrib</span><span class="p">(</span><span class="n">comment</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="se">{{</span><span class="si">{</span><span class="n">schemas</span><span class="o">.</span><span class="n">w</span><span class="si">}</span><span class="se">}}</span><span class="s1">id&#39;</span><span class="p">)</span> <span class="o">==</span> <span class="nb">str</span><span class="p">(</span><span class="n">comment_id</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">new_author</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">comment</span><span class="o">.</span><span class="n">attrib</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="se">{{</span><span class="si">{</span><span class="n">schemas</span><span class="o">.</span><span class="n">w</span><span class="si">}</span><span class="se">}}</span><span class="s1">author&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_author</span>
+                <span class="k">for</span> <span class="n">paragraph</span> <span class="ow">in</span> <span class="n">comment</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">para_count</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                        <span class="n">remove_queue</span><span class="p">[</span><span class="n">paragraph</span><span class="p">]</span> <span class="o">=</span> <span class="n">comment</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">para_count</span> <span class="o">+=</span> <span class="mi">1</span>
+                        <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="n">paragraph</span><span class="p">:</span>
+                            <span class="k">if</span> <span class="n">elem</span><span class="o">.</span><span class="n">tag</span> <span class="o">==</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="se">{{</span><span class="si">{</span><span class="n">schemas</span><span class="o">.</span><span class="n">w</span><span class="si">}</span><span class="se">}}</span><span class="s1">r&#39;</span><span class="p">:</span>
+                                <span class="k">for</span> <span class="n">sub_elem</span> <span class="ow">in</span> <span class="n">elem</span><span class="p">:</span>
+                                    <span class="k">if</span> <span class="n">sub_elem</span><span class="o">.</span><span class="n">tag</span> <span class="o">==</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="se">{{</span><span class="si">{</span><span class="n">schemas</span><span class="o">.</span><span class="n">w</span><span class="si">}</span><span class="se">}}</span><span class="s1">t&#39;</span><span class="p">:</span>
+                                        <span class="n">sub_elem</span><span class="o">.</span><span class="n">text</span> <span class="o">=</span> <span class="n">comment_text</span>
+
+        <span class="k">for</span> <span class="n">para</span><span class="p">,</span> <span class="n">comm</span> <span class="ow">in</span> <span class="n">remove_queue</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">comm</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">para</span><span class="p">)</span>
+
+        <span class="n">tree</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_temp_dir</span><span class="p">,</span> <span class="s1">&#39;word&#39;</span><span class="p">,</span> <span class="s1">&#39;comments.xml&#39;</span><span class="p">),</span> <span class="n">xml_declaration</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                   <span class="n">encoding</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">encoding</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="XMLRedactor.save">
+<a class="viewcode-back" href="../../docx.html#docx.xml_redactor.XMLRedactor.save">[docs]</a>
+    <span class="k">def</span> <span class="nf">save</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Save changes to files</span>
+<span class="sd">        :param path: path to new files</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">path</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">path</span>
+        <span class="k">with</span> <span class="n">zipfile</span><span class="o">.</span><span class="n">ZipFile</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">zw</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">folder</span><span class="p">,</span> <span class="n">sub_folder</span><span class="p">,</span> <span class="n">file_names</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">walk</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_temp_dir</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">file_name</span> <span class="ow">in</span> <span class="n">file_names</span><span class="p">:</span>
+                    <span class="n">file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">folder</span><span class="p">,</span> <span class="n">file_name</span><span class="p">)</span>
+                    <span class="n">zw</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">relpath</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_temp_dir</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="XMLRedactor.add_new_abstract_and_num">
+<a class="viewcode-back" href="../../docx.html#docx.xml_redactor.XMLRedactor.add_new_abstract_and_num">[docs]</a>
+    <span class="k">def</span> <span class="nf">add_new_abstract_and_num</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">list_style</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="n">levels_count</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+                                 <span class="n">bullet_symbol</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;•&#39;</span><span class="p">,</span>
+                                 <span class="n">custom_ilvl_marking</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        This function added new abstractNum and num</span>
+<span class="sd">        list_style -- True: decimal, False: bullet</span>
+<span class="sd">        Return id of new Num-object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">schemas</span><span class="o">.</span><span class="n">to_namespace</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">ET</span><span class="o">.</span><span class="n">register_namespace</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
+        <span class="n">tree</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__get_tree</span><span class="p">(</span><span class="s1">&#39;numbering.xml&#39;</span><span class="p">)</span>
+        <span class="n">root</span> <span class="o">=</span> <span class="n">tree</span><span class="o">.</span><span class="n">getroot</span><span class="p">()</span>
+        <span class="n">max_abstract</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="n">max_num</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">levels_count</span> <span class="o">&lt;=</span> <span class="mi">8</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">ILvlDoesNotExist</span><span class="p">(</span><span class="n">levels_count</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">custom_ilvl_marking</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">custom_ilvl_marking</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__get_ilvl_marking</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">abstract_num</span> <span class="ow">in</span> <span class="n">root</span><span class="o">.</span><span class="n">iter</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="se">{{</span><span class="si">{</span><span class="n">schemas</span><span class="o">.</span><span class="n">w</span><span class="si">}</span><span class="se">}}</span><span class="s1">abstractNum&#39;</span><span class="p">):</span>
+            <span class="n">max_abstract</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">max_abstract</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">abstract_num</span><span class="o">.</span><span class="n">attrib</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="se">{{</span><span class="si">{</span><span class="n">schemas</span><span class="o">.</span><span class="n">w</span><span class="si">}</span><span class="se">}}</span><span class="s1">abstractNumId&#39;</span><span class="p">]))</span>
+        <span class="k">for</span> <span class="n">num</span> <span class="ow">in</span> <span class="n">root</span><span class="o">.</span><span class="n">iter</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="se">{{</span><span class="si">{</span><span class="n">schemas</span><span class="o">.</span><span class="n">w</span><span class="si">}</span><span class="se">}}</span><span class="s1">num&#39;</span><span class="p">):</span>
+            <span class="n">max_num</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">max_num</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">num</span><span class="o">.</span><span class="n">attrib</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="se">{{</span><span class="si">{</span><span class="n">schemas</span><span class="o">.</span><span class="n">w</span><span class="si">}</span><span class="se">}}</span><span class="s1">numId&#39;</span><span class="p">]))</span>
+        <span class="n">insert_abstract</span> <span class="o">=</span> <span class="n">ET</span><span class="o">.</span><span class="n">Element</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="se">{{</span><span class="si">{</span><span class="n">schemas</span><span class="o">.</span><span class="n">w</span><span class="si">}</span><span class="se">}}</span><span class="s1">abstractNum&#39;</span><span class="p">,</span> <span class="p">{</span>
+            <span class="sa">f</span><span class="s1">&#39;</span><span class="se">{{</span><span class="si">{</span><span class="n">schemas</span><span class="o">.</span><span class="n">w</span><span class="si">}</span><span class="se">}}</span><span class="s1">abstractNumId&#39;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">max_abstract</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span>
+            <span class="sa">f</span><span class="s1">&#39;</span><span class="se">{{</span><span class="si">{</span><span class="n">schemas</span><span class="o">.</span><span class="n">w15</span><span class="si">}</span><span class="se">}}</span><span class="s1">restartNumberingAfterBreak&#39;</span><span class="p">:</span> <span class="s1">&#39;0&#39;</span>
+        <span class="p">})</span>
+        <span class="n">insert_abstract</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ET</span><span class="o">.</span><span class="n">Element</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="se">{{</span><span class="si">{</span><span class="n">schemas</span><span class="o">.</span><span class="n">w</span><span class="si">}</span><span class="se">}}</span><span class="s1">multiLevelType&#39;</span><span class="p">,</span> <span class="p">{</span>
+            <span class="sa">f</span><span class="s1">&#39;</span><span class="se">{{</span><span class="si">{</span><span class="n">schemas</span><span class="o">.</span><span class="n">w</span><span class="si">}</span><span class="se">}}</span><span class="s1">val&#39;</span><span class="p">:</span> <span class="s1">&#39;hybridMultilevel&#39;</span>
+        <span class="p">}))</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">levels_count</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">insert_abstract</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__create_ilvl</span><span class="p">(</span><span class="n">list_style</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">bullet_symbol</span><span class="p">,</span>
+                                                          <span class="n">custom_ilvl_marking</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span>
+            <span class="k">except</span> <span class="ne">KeyError</span> <span class="k">as</span> <span class="n">_ke</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">IncorrectILvlMarkingDict</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+
+        <span class="n">insert_num</span> <span class="o">=</span> <span class="n">ET</span><span class="o">.</span><span class="n">Element</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="se">{{</span><span class="si">{</span><span class="n">schemas</span><span class="o">.</span><span class="n">w</span><span class="si">}</span><span class="se">}}</span><span class="s1">num&#39;</span><span class="p">,</span> <span class="p">{</span>
+            <span class="sa">f</span><span class="s1">&#39;</span><span class="se">{{</span><span class="si">{</span><span class="n">schemas</span><span class="o">.</span><span class="n">w</span><span class="si">}</span><span class="se">}}</span><span class="s1">numId&#39;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">max_num</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span>
+            <span class="sa">f</span><span class="s1">&#39;</span><span class="se">{{</span><span class="si">{</span><span class="n">schemas</span><span class="o">.</span><span class="n">w16cid</span><span class="si">}</span><span class="se">}}</span><span class="s1">durableId&#39;</span><span class="p">:</span> <span class="s1">&#39;0&#39;</span>
+        <span class="p">})</span>
+        <span class="n">insert_num</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ET</span><span class="o">.</span><span class="n">Element</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="se">{{</span><span class="si">{</span><span class="n">schemas</span><span class="o">.</span><span class="n">w</span><span class="si">}</span><span class="se">}}</span><span class="s1">abstractNumId&#39;</span><span class="p">,</span> <span class="p">{</span>
+            <span class="sa">f</span><span class="s1">&#39;</span><span class="se">{{</span><span class="si">{</span><span class="n">schemas</span><span class="o">.</span><span class="n">w</span><span class="si">}</span><span class="se">}}</span><span class="s1">val&#39;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">max_abstract</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="p">}))</span>
+        <span class="n">root</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">root</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;.//</span><span class="se">{{</span><span class="si">{</span><span class="n">schemas</span><span class="o">.</span><span class="n">w</span><span class="si">}</span><span class="se">}}</span><span class="s1">abstractNum&#39;</span><span class="p">)),</span> <span class="n">insert_abstract</span><span class="p">)</span>
+        <span class="n">root</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">insert_num</span><span class="p">)</span>
+
+        <span class="n">tree</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_temp_dir</span><span class="p">,</span> <span class="s1">&#39;word&#39;</span><span class="p">,</span> <span class="s1">&#39;numbering.xml&#39;</span><span class="p">),</span> <span class="n">xml_declaration</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                   <span class="n">encoding</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">encoding</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">max_num</span> <span class="o">+</span> <span class="mi">1</span></div>
+
+
+    <span class="k">def</span> <span class="nf">__create_ilvl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">is_decimal</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">i_lvl</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">bullet_symbol</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;•&#39;</span><span class="p">,</span>
+                      <span class="n">ilvl_marking</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Element</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create ilvl-Element for new abstractNum</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">i_lvl</span> <span class="o">=</span> <span class="n">ET</span><span class="o">.</span><span class="n">Element</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="se">{{</span><span class="si">{</span><span class="n">schemas</span><span class="o">.</span><span class="n">w</span><span class="si">}</span><span class="se">}}</span><span class="s1">lvl&#39;</span><span class="p">,</span> <span class="p">{</span><span class="sa">f</span><span class="s1">&#39;</span><span class="se">{{</span><span class="si">{</span><span class="n">schemas</span><span class="o">.</span><span class="n">w</span><span class="si">}</span><span class="se">}}</span><span class="s1">ilvl&#39;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">i_lvl</span><span class="p">)})</span>
+        <span class="n">i_lvl</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ET</span><span class="o">.</span><span class="n">Element</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="se">{{</span><span class="si">{</span><span class="n">schemas</span><span class="o">.</span><span class="n">w</span><span class="si">}</span><span class="se">}}</span><span class="s1">start&#39;</span><span class="p">,</span> <span class="p">{</span><span class="sa">f</span><span class="s1">&#39;</span><span class="se">{{</span><span class="si">{</span><span class="n">schemas</span><span class="o">.</span><span class="n">w</span><span class="si">}</span><span class="se">}}</span><span class="s1">val&#39;</span><span class="p">:</span> <span class="s1">&#39;1&#39;</span><span class="p">}))</span>
+        <span class="n">i_lvl</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ET</span><span class="o">.</span><span class="n">Element</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="se">{{</span><span class="si">{</span><span class="n">schemas</span><span class="o">.</span><span class="n">w</span><span class="si">}</span><span class="se">}}</span><span class="s1">numFmt&#39;</span><span class="p">,</span>
+                                <span class="p">{</span><span class="sa">f</span><span class="s1">&#39;</span><span class="se">{{</span><span class="si">{</span><span class="n">schemas</span><span class="o">.</span><span class="n">w</span><span class="si">}</span><span class="se">}}</span><span class="s1">val&#39;</span><span class="p">:</span> <span class="s1">&#39;decimal&#39;</span> <span class="k">if</span> <span class="n">is_decimal</span> <span class="k">else</span> <span class="s1">&#39;bullet&#39;</span><span class="p">}))</span>
+        <span class="n">i_lvl</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ET</span><span class="o">.</span><span class="n">Element</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="se">{{</span><span class="si">{</span><span class="n">schemas</span><span class="o">.</span><span class="n">w</span><span class="si">}</span><span class="se">}}</span><span class="s1">lvlText&#39;</span><span class="p">,</span>
+                                <span class="p">{</span><span class="sa">f</span><span class="s1">&#39;</span><span class="se">{{</span><span class="si">{</span><span class="n">schemas</span><span class="o">.</span><span class="n">w</span><span class="si">}</span><span class="se">}}</span><span class="s1">val&#39;</span><span class="p">:</span> <span class="s1">&#39;%1.&#39;</span> <span class="k">if</span> <span class="n">is_decimal</span> <span class="k">else</span> <span class="n">bullet_symbol</span><span class="p">}))</span>
+        <span class="n">i_lvl</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ET</span><span class="o">.</span><span class="n">Element</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="se">{{</span><span class="si">{</span><span class="n">schemas</span><span class="o">.</span><span class="n">w</span><span class="si">}</span><span class="se">}}</span><span class="s1">lvlJc&#39;</span><span class="p">,</span> <span class="p">{</span><span class="sa">f</span><span class="s1">&#39;</span><span class="se">{{</span><span class="si">{</span><span class="n">schemas</span><span class="o">.</span><span class="n">w</span><span class="si">}</span><span class="se">}}</span><span class="s1">val&#39;</span><span class="p">:</span> <span class="s1">&#39;left&#39;</span><span class="p">}))</span>
+        <span class="n">temp_lem</span> <span class="o">=</span> <span class="n">ET</span><span class="o">.</span><span class="n">Element</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="se">{{</span><span class="si">{</span><span class="n">schemas</span><span class="o">.</span><span class="n">w</span><span class="si">}</span><span class="se">}}</span><span class="s1">pPr&#39;</span><span class="p">)</span>
+        <span class="n">temp_lem</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ET</span><span class="o">.</span><span class="n">Element</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s1">&#39;</span><span class="se">{{</span><span class="si">{</span><span class="n">schemas</span><span class="o">.</span><span class="n">w</span><span class="si">}</span><span class="se">}}</span><span class="s1">ind&#39;</span><span class="p">,</span>
+            <span class="p">{</span><span class="sa">f</span><span class="s1">&#39;</span><span class="se">{{</span><span class="si">{</span><span class="n">schemas</span><span class="o">.</span><span class="n">w</span><span class="si">}</span><span class="se">}}</span><span class="s1">left&#39;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">ilvl_marking</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="se">{{</span><span class="si">{</span><span class="n">schemas</span><span class="o">.</span><span class="n">w</span><span class="si">}</span><span class="se">}}</span><span class="s1">hanging&#39;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">ilvl_marking</span><span class="p">[</span><span class="mi">1</span><span class="p">])}</span>
+        <span class="p">))</span>
+        <span class="n">i_lvl</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">temp_lem</span><span class="p">)</span>
+        <span class="n">temp_lem</span> <span class="o">=</span> <span class="n">ET</span><span class="o">.</span><span class="n">Element</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="se">{{</span><span class="si">{</span><span class="n">schemas</span><span class="o">.</span><span class="n">w</span><span class="si">}</span><span class="se">}}</span><span class="s1">rPr&#39;</span><span class="p">)</span>
+        <span class="n">temp_lem</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ET</span><span class="o">.</span><span class="n">Element</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="se">{{</span><span class="si">{</span><span class="n">schemas</span><span class="o">.</span><span class="n">w</span><span class="si">}</span><span class="se">}}</span><span class="s1">rFonts&#39;</span><span class="p">,</span>
+                                   <span class="p">{</span><span class="sa">f</span><span class="s1">&#39;</span><span class="se">{{</span><span class="si">{</span><span class="n">schemas</span><span class="o">.</span><span class="n">w</span><span class="si">}</span><span class="se">}}</span><span class="s1">hint&#39;</span><span class="p">:</span> <span class="s1">&#39;default&#39;</span><span class="p">}))</span>
+        <span class="n">i_lvl</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">temp_lem</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">i_lvl</span>
+
+<div class="viewcode-block" id="XMLRedactor.edit_list_style_by_paraIds">
+<a class="viewcode-back" href="../../docx.html#docx.xml_redactor.XMLRedactor.edit_list_style_by_paraIds">[docs]</a>
+    <span class="k">def</span> <span class="nf">edit_list_style_by_paraIds</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">paraIds</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">str</span><span class="p">],</span>
+                                   <span class="n">new_num</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Replace the numId to newNum of all specified paragraphs</span>
+<span class="sd">        :param paraIds: One or many paraIds, which we replace numId</span>
+<span class="sd">        :param new_num: New numId</span>
+<span class="sd">        :return: None</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">paraIds</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">paraIds</span> <span class="o">=</span> <span class="p">[</span><span class="n">paraIds</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">schemas</span><span class="o">.</span><span class="n">to_namespace</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">ET</span><span class="o">.</span><span class="n">register_namespace</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
+        <span class="n">tree</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__get_tree</span><span class="p">(</span><span class="s1">&#39;document.xml&#39;</span><span class="p">)</span>
+        <span class="n">root</span> <span class="o">=</span> <span class="n">tree</span><span class="o">.</span><span class="n">getroot</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">paragraph</span> <span class="ow">in</span> <span class="n">root</span><span class="o">.</span><span class="n">iter</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="se">{{</span><span class="si">{</span><span class="n">schemas</span><span class="o">.</span><span class="n">w</span><span class="si">}</span><span class="se">}}</span><span class="s1">p&#39;</span><span class="p">):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">__attrib</span><span class="p">(</span><span class="n">paragraph</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="se">{{</span><span class="si">{</span><span class="n">schemas</span><span class="o">.</span><span class="n">w14</span><span class="si">}</span><span class="se">}}</span><span class="s1">paraId&#39;</span><span class="p">)</span> <span class="ow">in</span> <span class="n">paraIds</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">cnt</span> <span class="o">=</span> <span class="mi">0</span>
+                    <span class="k">for</span> <span class="n">num</span> <span class="ow">in</span> <span class="n">paragraph</span><span class="o">.</span><span class="n">iter</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="se">{{</span><span class="si">{</span><span class="n">schemas</span><span class="o">.</span><span class="n">w</span><span class="si">}</span><span class="se">}}</span><span class="s1">numId&#39;</span><span class="p">):</span>
+                        <span class="n">num</span><span class="o">.</span><span class="n">attrib</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="se">{{</span><span class="si">{</span><span class="n">schemas</span><span class="o">.</span><span class="n">w</span><span class="si">}</span><span class="se">}}</span><span class="s1">val&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">new_num</span><span class="p">)</span>
+                        <span class="n">cnt</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="k">if</span> <span class="n">cnt</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">()</span>
+                <span class="k">except</span> <span class="ne">KeyError</span> <span class="k">as</span> <span class="n">_ke</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">ParagraphDoesNotContainNumPr</span><span class="p">(</span><span class="n">paragraph</span><span class="o">.</span><span class="n">attrib</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="se">{{</span><span class="si">{</span><span class="n">schemas</span><span class="o">.</span><span class="n">w14</span><span class="si">}</span><span class="se">}}</span><span class="s1">paraId&#39;</span><span class="p">])</span>
+        <span class="n">tree</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_temp_dir</span><span class="p">,</span> <span class="s1">&#39;word&#39;</span><span class="p">,</span> <span class="s1">&#39;document.xml&#39;</span><span class="p">),</span> <span class="n">xml_declaration</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                   <span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="XMLRedactor.get_all_para_attributes">
+<a class="viewcode-back" href="../../docx.html#docx.xml_redactor.XMLRedactor.get_all_para_attributes">[docs]</a>
+    <span class="k">def</span> <span class="nf">get_all_para_attributes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get all paragraphs in word/document.xml with their attributes</span>
+<span class="sd">        :return: List of attributes with their values</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">tree</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__get_tree</span><span class="p">(</span><span class="s1">&#39;document.xml&#39;</span><span class="p">)</span>
+        <span class="n">root</span> <span class="o">=</span> <span class="n">tree</span><span class="o">.</span><span class="n">getroot</span><span class="p">()</span>
+        <span class="n">paragraphs</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">paragraph</span> <span class="ow">in</span> <span class="n">root</span><span class="o">.</span><span class="n">iter</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="se">{{</span><span class="si">{</span><span class="n">schemas</span><span class="o">.</span><span class="n">w</span><span class="si">}</span><span class="se">}}</span><span class="s1">p&#39;</span><span class="p">):</span>
+            <span class="n">paragraphs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">paragraph</span><span class="o">.</span><span class="n">attrib</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">paragraphs</span></div>
+</div>
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">Edulytica-PythonDM</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">src</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2024, Edulytica Team.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 7.3.7</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 0.7.16</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

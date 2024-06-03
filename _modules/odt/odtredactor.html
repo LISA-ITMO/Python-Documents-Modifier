@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>odt.odtredactor &#8212; Edulytica-PythonDM 0.0.1 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=d1102ebc" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=12dfc556" />
+    <script src="../../_static/documentation_options.js?v=d45e8c67"></script>
+    <script src="../../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for odt.odtredactor</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">src.odt.enum.styles</span> <span class="kn">import</span> <span class="n">Styles</span>
+<span class="kn">from</span> <span class="nn">src.odt.enum.style</span> <span class="kn">import</span> <span class="n">Style</span>
+<span class="kn">from</span> <span class="nn">src.odt.enum.annotation</span> <span class="kn">import</span> <span class="n">Annotation</span>
+<span class="kn">from</span> <span class="nn">src.odt.enum.namespaces</span> <span class="kn">import</span> <span class="n">NameSpaces</span>
+
+<span class="kn">import</span> <span class="nn">zipfile</span>
+<span class="kn">import</span> <span class="nn">xml.etree.ElementTree</span> <span class="k">as</span> <span class="nn">ET</span>
+
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Union</span>
+
+<div class="viewcode-block" id="ODTRedactor">
+<a class="viewcode-back" href="../../odt.html#odt.odtredactor.ODTRedactor">[docs]</a>
+<span class="k">class</span> <span class="nc">ODTRedactor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Class for working with ODT documents&quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path_input</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">path_output</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">encoding</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;UTF-8&quot;</span><span class="p">,</span> <span class="n">datafile</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;content.xml&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">path_input</span> <span class="o">=</span> <span class="n">path_input</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">path_output</span> <span class="o">=</span> <span class="n">path_output</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__load_file</span><span class="p">(</span><span class="n">path_input</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stringroot</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__get_root</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">filename</span><span class="o">=</span><span class="n">datafile</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="n">encoding</span><span class="p">)</span>
+
+<div class="viewcode-block" id="ODTRedactor.save_file">
+<a class="viewcode-back" href="../../odt.html#odt.odtredactor.ODTRedactor.save_file">[docs]</a>
+    <span class="k">def</span> <span class="nf">save_file</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Function for saving a file&quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;content.xml&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">bytes</span><span class="p">(</span><span class="n">ET</span><span class="o">.</span><span class="n">tostring</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">stringroot</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;UTF-8&quot;</span><span class="p">,</span> <span class="n">xml_declaration</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">default_namespace</span><span class="o">=</span><span class="kc">None</span><span class="p">))</span>
+
+        <span class="k">with</span> <span class="n">zipfile</span><span class="o">.</span><span class="n">ZipFile</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path_output</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">,</span> <span class="n">zipfile</span><span class="o">.</span><span class="n">ZIP_DEFLATED</span><span class="p">)</span> <span class="k">as</span> <span class="n">zip_file</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">file</span><span class="p">,</span> <span class="n">data</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">zip_file</span><span class="o">.</span><span class="n">writestr</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ODTRedactor.add_comment_by_text">
+<a class="viewcode-back" href="../../odt.html#odt.odtredactor.ODTRedactor.add_comment_by_text">[docs]</a>
+    <span class="k">def</span> <span class="nf">add_comment_by_text</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">text_annotation</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">author</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;Lisa&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param text: The text by which the paragraph to be commented on will be found</span>
+<span class="sd">        :param text_annotation: Annotation contents</span>
+<span class="sd">        :param author: Name of the author of the annotation</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">for</span> <span class="n">paragraph</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">stringroot</span><span class="o">.</span><span class="n">iter</span><span class="p">(</span><span class="n">Styles</span><span class="o">.</span><span class="n">PARAGRAPH</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">text</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">__get_text_from_children</span><span class="p">(</span><span class="n">paragraph</span><span class="p">):</span>
+                <span class="n">annotation</span> <span class="o">=</span> <span class="n">Annotation</span><span class="p">(</span>
+                    <span class="n">text_annotation</span><span class="o">=</span><span class="n">text_annotation</span><span class="p">,</span>
+                    <span class="n">author</span><span class="o">=</span><span class="n">author</span> 
+                <span class="p">)</span>
+
+                <span class="n">paragraph</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">annotation</span><span class="o">.</span><span class="n">get_start</span><span class="p">())</span>
+
+                <span class="n">paragraph</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                    <span class="n">annotation</span><span class="o">.</span><span class="n">get_end</span><span class="p">()</span>
+                <span class="p">)</span>
+
+                <span class="k">break</span></div>
+
+
+<div class="viewcode-block" id="ODTRedactor.delete_comment_by_id">
+<a class="viewcode-back" href="../../odt.html#odt.odtredactor.ODTRedactor.delete_comment_by_id">[docs]</a>
+    <span class="k">def</span> <span class="nf">delete_comment_by_id</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name_id</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param name_id: name_id of the annotation to be deleted</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">name_id</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">name_id</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">stringroot</span><span class="o">.</span><span class="n">iter</span><span class="p">(</span><span class="n">Styles</span><span class="o">.</span><span class="n">PARAGRAPH</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">p</span><span class="o">.</span><span class="n">iter</span><span class="p">(</span><span class="n">Styles</span><span class="o">.</span><span class="n">ANNOTATION</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">name_id</span> <span class="o">==</span> <span class="n">i</span><span class="o">.</span><span class="n">attrib</span><span class="p">[</span><span class="n">NameSpaces</span><span class="o">.</span><span class="n">XML</span><span class="o">+</span><span class="s1">&#39;id&#39;</span><span class="p">]:</span>
+                    <span class="nb">id</span> <span class="o">=</span> <span class="n">i</span><span class="o">.</span><span class="n">attrib</span><span class="p">[</span><span class="n">NameSpaces</span><span class="o">.</span><span class="n">OFFICE</span><span class="o">+</span><span class="s1">&#39;name&#39;</span><span class="p">]</span>
+                    <span class="n">p</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+                    <span class="k">break</span>
+
+        <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">stringroot</span><span class="o">.</span><span class="n">iter</span><span class="p">(</span><span class="n">Styles</span><span class="o">.</span><span class="n">PARAGRAPH</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">p</span><span class="o">.</span><span class="n">iter</span><span class="p">(</span><span class="n">Styles</span><span class="o">.</span><span class="n">SPAN</span><span class="p">):</span>
+                <span class="n">ann</span> <span class="o">=</span>  <span class="n">i</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">Styles</span><span class="o">.</span><span class="n">ANNOTATION_END</span><span class="p">)</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">ann</span><span class="p">,</span> <span class="n">ET</span><span class="o">.</span><span class="n">Element</span><span class="p">)</span> <span class="ow">and</span> <span class="n">ann</span><span class="o">.</span><span class="n">attrib</span><span class="p">[</span><span class="n">NameSpaces</span><span class="o">.</span><span class="n">OFFICE</span><span class="o">+</span><span class="s1">&#39;name&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="nb">id</span><span class="p">:</span>
+                    <span class="n">p</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+                    <span class="k">break</span></div>
+
+
+<div class="viewcode-block" id="ODTRedactor.edit_style_by_text">
+<a class="viewcode-back" href="../../odt.html#odt.odtredactor.ODTRedactor.edit_style_by_text">[docs]</a>
+    <span class="k">def</span> <span class="nf">edit_style_by_text</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">font_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">font_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">color</span><span class="p">,</span> <span class="n">style_name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">family</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;text&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>   
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param text: the text for which the paragraph will be searched</span>
+<span class="sd">        :param font_name: new name of the font</span>
+<span class="sd">        :param font_size: new font size</span>
+<span class="sd">        :param color: new paragraph color</span>
+<span class="sd">        :param name: The name of the new style. </span>
+<span class="sd">        In case the argument is not passed, it is generated automatically</span>
+<span class="sd">        :param family: The family of the style from which the main features of the style are inherited</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">automatic_styles</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stringroot</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">Styles</span><span class="o">.</span><span class="n">AUTOMATIC_STYLE</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">paragraph</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">stringroot</span><span class="o">.</span><span class="n">iter</span><span class="p">(</span><span class="n">Styles</span><span class="o">.</span><span class="n">PARAGRAPH</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">text</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">__get_text_from_children</span><span class="p">(</span><span class="n">paragraph</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">span</span> <span class="ow">in</span> <span class="n">paragraph</span><span class="o">.</span><span class="n">iter</span><span class="p">(</span><span class="n">tag</span><span class="o">=</span><span class="n">Styles</span><span class="o">.</span><span class="n">SPAN</span><span class="p">):</span>
+                    <span class="n">style</span> <span class="o">=</span> <span class="n">Style</span><span class="p">(</span>
+                        <span class="n">data</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stringroot</span><span class="p">,</span>
+                        <span class="n">font_name</span><span class="o">=</span><span class="n">font_name</span><span class="p">,</span>
+                        <span class="n">font_size</span><span class="o">=</span><span class="n">font_size</span><span class="p">,</span>
+                        <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">,</span>
+                        <span class="n">parent_style_name</span><span class="o">=</span><span class="n">span</span><span class="o">.</span><span class="n">attrib</span><span class="p">[</span><span class="n">Styles</span><span class="o">.</span><span class="n">STYLE_NAME</span><span class="p">],</span> 
+                        <span class="n">name</span><span class="o">=</span><span class="n">style_name</span><span class="p">,</span>
+                        <span class="n">family</span><span class="o">=</span><span class="n">family</span><span class="p">,</span>
+                        <span class="n">text_position</span><span class="o">=</span><span class="kc">None</span>
+                    <span class="p">)</span>
+
+                    <span class="n">parent_style</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__get_style</span><span class="p">(</span><span class="n">span</span><span class="o">.</span><span class="n">attrib</span><span class="p">[</span><span class="n">Styles</span><span class="o">.</span><span class="n">STYLE_NAME</span><span class="p">])</span>
+                    <span class="n">properties</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">parent_style</span><span class="o">.</span><span class="n">iter</span><span class="p">(</span><span class="n">Styles</span><span class="o">.</span><span class="n">TEXT_PROPERTIES</span><span class="p">))</span>
+                    <span class="k">if</span> <span class="n">Styles</span><span class="o">.</span><span class="n">TEXT_POSITION</span> <span class="ow">in</span> <span class="n">properties</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                        <span class="n">style</span><span class="o">.</span><span class="n">text_position</span> <span class="o">=</span> <span class="n">properties</span><span class="o">.</span><span class="n">attrib</span><span class="p">[</span><span class="n">Styles</span><span class="o">.</span><span class="n">TEXT_POSITION</span><span class="p">]</span>
+
+                    <span class="n">automatic_styles</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                        <span class="n">style</span><span class="o">.</span><span class="n">create_element_style</span><span class="p">()</span>
+                    <span class="p">)</span>
+
+                    <span class="n">span</span><span class="o">.</span><span class="n">attrib</span><span class="p">[</span><span class="n">Styles</span><span class="o">.</span><span class="n">STYLE_NAME</span><span class="p">]</span> <span class="o">=</span> <span class="n">style</span><span class="o">.</span><span class="n">name</span>
+
+                <span class="k">break</span></div>
+
+    
+    <span class="k">def</span> <span class="nf">__get_style</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ET</span><span class="o">.</span><span class="n">Element</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;A helper method that returns a style object by name&quot;&quot;&quot;</span>
+        <span class="n">automatic_styles</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stringroot</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">Styles</span><span class="o">.</span><span class="n">AUTOMATIC_STYLE</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">automatic_styles</span><span class="o">.</span><span class="n">iter</span><span class="p">(</span><span class="n">Styles</span><span class="o">.</span><span class="n">STYLE</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">i</span><span class="o">.</span><span class="n">attrib</span><span class="p">[</span><span class="n">NameSpaces</span><span class="o">.</span><span class="n">STYLE</span><span class="o">+</span><span class="s1">&#39;name&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">name</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">i</span>
+            
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">__get_root</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">filename</span><span class="p">,</span> <span class="n">encoding</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">ET</span><span class="o">.</span><span class="n">fromstring</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">filename</span><span class="p">]</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">encoding</span><span class="p">))</span>
+            
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">__load_file</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Function for loading a file by path&quot;&quot;&quot;</span>
+        <span class="k">with</span> <span class="n">zipfile</span><span class="o">.</span><span class="n">ZipFile</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">zip_ref</span><span class="p">:</span>
+            <span class="n">file_data</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">zip_ref</span><span class="o">.</span><span class="n">namelist</span><span class="p">():</span>
+                <span class="k">with</span> <span class="n">zip_ref</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">file</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                    <span class="n">file_data</span><span class="p">[</span><span class="n">file</span><span class="p">]</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">file_data</span>
+            
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">__get_text_from_children</span><span class="p">(</span><span class="n">paragraph</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;An helper method that returns text from children objects&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">filter</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="p">[</span><span class="n">paragraph</span><span class="o">.</span><span class="n">text</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="n">i</span><span class="o">.</span><span class="n">text</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">paragraph</span><span class="o">.</span><span class="n">iter</span><span class="p">(</span><span class="n">Styles</span><span class="o">.</span><span class="n">SPAN</span><span class="p">)]))</span></div>
+
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">Edulytica-PythonDM</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">src</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2024, Edulytica Team.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 7.3.7</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 0.7.16</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

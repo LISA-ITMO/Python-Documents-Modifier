@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>exceptions package &#8212; Edulytica-PythonDM 0.0.1 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d1102ebc" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=12dfc556" />
+    <script src="_static/documentation_options.js?v=d45e8c67"></script>
+    <script src="_static/doctools.js?v=9a2dae69"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="odt package" href="odt.html" />
+    <link rel="prev" title="docx.enum package" href="docx.enum.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="exceptions-package">
+<h1>exceptions package<a class="headerlink" href="#exceptions-package" title="Link to this heading">¶</a></h1>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Link to this heading">¶</a></h2>
+</section>
+<section id="module-exceptions.docx_exceptions">
+<span id="exceptions-docx-exceptions-module"></span><h2>exceptions.docx_exceptions module<a class="headerlink" href="#module-exceptions.docx_exceptions" title="Link to this heading">¶</a></h2>
+<dl class="py exception">
+<dt class="sig sig-object py" id="exceptions.docx_exceptions.FileDoesNotContainXMLFile">
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">exceptions.docx_exceptions.</span></span><span class="sig-name descname"><span class="pre">FileDoesNotContainXMLFile</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/exceptions/docx_exceptions.html#FileDoesNotContainXMLFile"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#exceptions.docx_exceptions.FileDoesNotContainXMLFile" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></p>
+<p>The error called when you try to edit any files in DOCX-file, that doesn’t exist in DOCX-archive
+Example: you try edit any comment, but DOCX-archive doesn’t contain comments.xml</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="exceptions.docx_exceptions.ILvlDoesNotExist">
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">exceptions.docx_exceptions.</span></span><span class="sig-name descname"><span class="pre">ILvlDoesNotExist</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">num</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/exceptions/docx_exceptions.html#ILvlDoesNotExist"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#exceptions.docx_exceptions.ILvlDoesNotExist" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></p>
+<p>The error called when you try created ilvl with number not from range [0; 8]</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="exceptions.docx_exceptions.ImpossibleColor">
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">exceptions.docx_exceptions.</span></span><span class="sig-name descname"><span class="pre">ImpossibleColor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rgb</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/exceptions/docx_exceptions.html#ImpossibleColor"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#exceptions.docx_exceptions.ImpossibleColor" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></p>
+<p>The error called when you try to input rgb-color with values not in range (0, 255)</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="exceptions.docx_exceptions.IncorrectILvlMarkingDict">
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">exceptions.docx_exceptions.</span></span><span class="sig-name descname"><span class="pre">IncorrectILvlMarkingDict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ind</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/exceptions/docx_exceptions.html#IncorrectILvlMarkingDict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#exceptions.docx_exceptions.IncorrectILvlMarkingDict" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></p>
+<p>The error called when program try to get indentations from custom ilvl_marking-dict by
+Non-existent level
+Example: you specified 8 levels in abstractNum, but ilvl_marking-dict contains only 7 values</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="exceptions.docx_exceptions.InvalidAttributeKey">
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">exceptions.docx_exceptions.</span></span><span class="sig-name descname"><span class="pre">InvalidAttributeKey</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tag</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/exceptions/docx_exceptions.html#InvalidAttributeKey"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#exceptions.docx_exceptions.InvalidAttributeKey" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></p>
+<p>The error called when you try to get value of attribute, that doesn’t exist</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="exceptions.docx_exceptions.NotSupportedFormat">
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">exceptions.docx_exceptions.</span></span><span class="sig-name descname"><span class="pre">NotSupportedFormat</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'file</span> <span class="pre">you</span> <span class="pre">open'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/exceptions/docx_exceptions.html#NotSupportedFormat"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#exceptions.docx_exceptions.NotSupportedFormat" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></p>
+<p>The error called when you input a file name of non-docx format.</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="exceptions.docx_exceptions.ParagraphDoesNotContainNumPr">
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">exceptions.docx_exceptions.</span></span><span class="sig-name descname"><span class="pre">ParagraphDoesNotContainNumPr</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">paraId</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/exceptions/docx_exceptions.html#ParagraphDoesNotContainNumPr"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#exceptions.docx_exceptions.ParagraphDoesNotContainNumPr" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></p>
+<p>The error called when you try to replace num-value for paragraph, which doesn’t have num</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="exceptions.docx_exceptions.ParagraphNotFound">
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">exceptions.docx_exceptions.</span></span><span class="sig-name descname"><span class="pre">ParagraphNotFound</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">paraId</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/exceptions/docx_exceptions.html#ParagraphNotFound"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#exceptions.docx_exceptions.ParagraphNotFound" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></p>
+<p>The error called when you input paraId of a non-exists Paragraph</p>
+</dd></dl>
+
+</section>
+<section id="module-exceptions">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-exceptions" title="Link to this heading">¶</a></h2>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">Edulytica-PythonDM</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">src</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="docx.html">docx package</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">exceptions package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="odt.html">odt package</a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  <li><a href="modules.html">src</a><ul>
+      <li>Previous: <a href="docx.enum.html" title="previous chapter">docx.enum package</a></li>
+      <li>Next: <a href="odt.html" title="next chapter">odt package</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2024, Edulytica Team.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 7.3.7</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 0.7.16</a>
+      
+      |
+      <a href="_sources/exceptions.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
